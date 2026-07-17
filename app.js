@@ -1,7 +1,7 @@
 // Core Application Logic for QR Event Check-In PRO
 
 // CONFIGURACIÓN DE LICENCIA (Pega aquí la URL de tu Google Apps Script una vez implementado)
-const GOOGLE_SCRIPT_URL = "INSERTA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUUaj-gdc2WcOV0NeDBassrXUQFuA1ERAl8mIlolRi1mlybKZ9i67x1lt-w/exec";
 
 // Global state variables
 let guestData = []; // Array of guest objects
