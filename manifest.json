@@ -1,0 +1,52 @@
+{
+  "id": "/qr-event-attendance-pro",
+  "short_name": "Check-In PRO",
+  "name": "QR Event Check-In PRO & Custom Branding",
+  "description": "Herramienta offline avanzada para control de asistencia de eventos con personalización de logotipos, colores, generador de QRs y fusión multipuerta.",
+  "lang": "es",
+  "categories": [
+    "utilities",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pantalla de escáner y herramientas PRO"
+    }
+  ],
+  "start_url": "./index.html",
+  "scope": "./",
+  "background_color": "#0B0F19",
+  "theme_color": "#6366F1",
+  "display": "standalone",
+  "orientation": "portrait"
+}
