@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qr-attendance-pro-cache-v2';
+const CACHE_NAME = 'qr-attendance-pro-cache-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,9 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
   'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap'
+  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap',
+  'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js'
 ];
 
 self.addEventListener('install', (event) => {

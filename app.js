@@ -3,6 +3,44 @@
 // CONFIGURACIÓN DE LICENCIA (Pega aquí la URL de tu Google Apps Script una vez implementado)
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUUaj-gdc2WcOV0NeDBassrXUQFuA1ERAl8mIlolRi1mlybKZ9i67x1lt-w/exec";
 
+// CONFIGURACIÓN DE FIREBASE (Pega aquí la configuración de tu proyecto Firebase para sincro en tiempo real)
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Sanitizar llaves para Firebase (evita caracteres inválidos en rutas JSON)
+function sanitizeFirebaseKey(val) {
+    if (!val) return "default";
+    return String(val).replace(/[\.\#\$\[\]]/g, "_");
+}
+
+const isFirebaseActive = typeof firebase !== 'undefined' && firebaseConfig.databaseURL && !firebaseConfig.databaseURL.includes("TU_PROYECTO");
+let dbRef = null;
+
+if (isFirebaseActive) {
+    firebase.initializeApp(firebaseConfig);
+}
+
+function syncCheckInToFirebase(guestId, attended, time, door = "Local") {
+    if (!isFirebaseActive) return;
+    const licenseKey = localStorage.getItem("pro-active-license-key") || "TEST-123-KEY";
+    const cleanKey = sanitizeFirebaseKey(licenseKey);
+    const cleanEvent = sanitizeFirebaseKey(activeSheetName);
+    const cleanGuestId = sanitizeFirebaseKey(guestId);
+    
+    firebase.database().ref(`licencias/${cleanKey}/eventos/${cleanEvent}/asistencias/${cleanGuestId}`).set({
+        attended: attended,
+        attendTime: time,
+        door: door
+    });
+}
+
 // Global state variables
 let guestData = []; // Array of guest objects
 let originalWorkbook = null; 
@@ -430,6 +468,46 @@ function handleExcelFile(file) {
             generateQrsBtn.removeAttribute("disabled");
             qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs.`;
             
+            // Sincronización en tiempo real Firebase
+            if (isFirebaseActive && activeSheetName) {
+                const licenseKey = localStorage.getItem("pro-active-license-key") || "TEST-123-KEY";
+                const cleanKey = sanitizeFirebaseKey(licenseKey);
+                const cleanEvent = sanitizeFirebaseKey(activeSheetName);
+                
+                if (dbRef) {
+                    dbRef.off();
+                }
+                
+                dbRef = firebase.database().ref(`licencias/${cleanKey}/eventos/${cleanEvent}/asistencias`);
+                dbRef.on('value', (snapshot) => {
+                    const val = snapshot.val();
+                    if (val) {
+                        let updated = false;
+                        guestData.forEach(guest => {
+                            const cleanGuestId = sanitizeFirebaseKey(guest.id);
+                            if (val[cleanGuestId] && val[cleanGuestId].attended) {
+                                const expectedAttendance = val[cleanGuestId].attendTime ? `Sí (${val[cleanGuestId].attendTime})` : "Sí";
+                                if (guest.attendance !== expectedAttendance) {
+                                    guest.attendance = expectedAttendance;
+                                    guest.rawRow["Asistencia"] = expectedAttendance;
+                                    updated = true;
+                                }
+                            } else {
+                                if (guest.attendance) {
+                                    guest.attendance = "";
+                                    guest.rawRow["Asistencia"] = "";
+                                    updated = true;
+                                }
+                            }
+                        });
+                        if (updated) {
+                            updateDashboard();
+                            renderGuestTable();
+                        }
+                    }
+                });
+            }
+
             updateDashboard();
             renderGuestTable();
             playSound('success');
@@ -443,6 +521,10 @@ function handleExcelFile(file) {
 }
 
 function resetAppState() {
+    if (dbRef) {
+        dbRef.off();
+        dbRef = null;
+    }
     stopScanner();
     guestData = [];
     originalWorkbook = null;
@@ -556,10 +638,12 @@ function toggleAttendance(id, revert = false) {
     if (revert) {
         guestData[guestIndex].attendance = "";
         guestData[guestIndex].rawRow["Asistencia"] = "";
+        syncCheckInToFirebase(id, false, "", "Revertido Manual");
     } else {
         const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         guestData[guestIndex].attendance = `Sí (${time})`;
         guestData[guestIndex].rawRow["Asistencia"] = `Sí (${time})`;
+        syncCheckInToFirebase(id, true, time, "Manual");
     }
 
     updateDashboard();
@@ -686,6 +770,9 @@ function onQrCodeSuccess(decodedText) {
         
         guestData[guestIndex].attendance = `Sí (${time})`;
         guestData[guestIndex].rawRow["Asistencia"] = `Sí (${time})`;
+        
+        // Sincronizar en tiempo real a Firebase
+        syncCheckInToFirebase(guest.id, true, time, "Escáner");
         
         updateDashboard();
         renderGuestTable();

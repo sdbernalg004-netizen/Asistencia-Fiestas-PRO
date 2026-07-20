@@ -1,5 +1,5 @@
 /**
- * CÓDIGO DE GOOGLE APPS SCRIPT PARA CONTROL DE LICENCIAS DE ACCESOQR
+ * CÓDIGO DE GOOGLE APPS SCRIPT PARA CONTROL DE LICENCIAS DE ACCESOQR (MULTIDISPOSITIVO)
  * 
  * INSTRUCCIONES:
  * 1. Crea una hoja de cálculo en Google Sheets.
@@ -7,13 +7,14 @@
  *    Celda A1: Clave Licencia
  *    Celda B1: Cliente
  *    Celda C1: Estado
- *    Celda D1: Dispositivo
+ *    Celda D1: Dispositivos
+ *    Celda E1: Limite Dispositivos
  * 3. En el menú superior, ve a "Extensiones" -> "Apps Script".
  * 4. Borra el código por defecto, pega este código de abajo y guarda.
  * 5. Haz clic en "Implementar" -> "Nueva implementación".
  * 6. Tipo: "Aplicación web".
  * 7. Ejecutar como: "Tú (tu correo)".
- * 8. Quién tiene acceso: "Cualquiera" (esto es clave para que la app pueda consultarlo).
+ * 8. Quién tiene acceso: "Cualquiera".
  * 9. Copia la URL de la aplicación web obtenida y pégala en el archivo `app.js` de la aplicación.
  */
 
@@ -78,7 +79,14 @@ function handleLicenseRequest(e) {
     
     // Leer valores de la fila encontrada
     var currentStatus = String(data[licenseRowIndex][2]).trim().toLowerCase(); // Columna C (Estado)
-    var registeredDevice = String(data[licenseRowIndex][3]).trim();           // Columna D (Dispositivo)
+    var devicesString = String(data[licenseRowIndex][3]).trim();               // Columna D (Dispositivos)
+    var deviceLimitRaw = data[licenseRowIndex][4];                            // Columna E (Límite Dispositivos)
+    
+    // Determinar límite numérico
+    var deviceLimit = parseInt(deviceLimitRaw, 10);
+    if (isNaN(deviceLimit) || deviceLimit <= 0) {
+      deviceLimit = 1; // Por defecto mínimo 1 dispositivo si está vacío o no es un número
+    }
     
     // Si la licencia está desactivada o suspendida
     if (currentStatus !== "activa") {
@@ -88,25 +96,44 @@ function handleLicenseRequest(e) {
       }));
     }
     
-    // Si la licencia ya está asignada a un dispositivo diferente
-    if (registeredDevice !== "" && registeredDevice !== deviceId) {
+    // Analizar la lista de dispositivos actuales
+    var activeDevices = [];
+    if (devicesString !== "") {
+      activeDevices = devicesString.split(",").map(function(item) {
+        return item.trim();
+      }).filter(function(item) {
+        return item !== "";
+      });
+    }
+    
+    // Si el dispositivo actual ya está registrado en la lista
+    if (activeDevices.indexOf(deviceId) !== -1) {
       return output.setContent(JSON.stringify({ 
-        success: false, 
-        message: "Esta licencia ya está activa en otro dispositivo." 
+        success: true, 
+        message: "Licencia verificada (Dispositivo ya registrado).",
+        client: data[licenseRowIndex][1]
       }));
     }
     
-    // Si es la primera vez que se activa, registrar el ID de dispositivo
-    if (registeredDevice === "") {
-      // Escribir en la Columna D (Fila es 1-indexed en Google Sheets, así que es licenseRowIndex + 1)
-      // La columna D es la columna 4
-      sheet.getRange(licenseRowIndex + 1, 4).setValue(deviceId);
+    // Si el dispositivo es nuevo pero ya se alcanzó el límite permitido
+    if (activeDevices.length >= deviceLimit) {
+      return output.setContent(JSON.stringify({ 
+        success: false, 
+        message: "Límite de dispositivos alcanzado (" + activeDevices.length + "/" + deviceLimit + "). Contacta a soporte para ampliar tu plan." 
+      }));
     }
+    
+    // Registrar el nuevo dispositivo
+    activeDevices.push(deviceId);
+    var newDevicesString = activeDevices.join(",");
+    
+    // Escribir en la Columna D (Fila es 1-indexed en Google Sheets, así que es licenseRowIndex + 1)
+    sheet.getRange(licenseRowIndex + 1, 4).setValue(newDevicesString);
     
     // Retorno exitoso
     return output.setContent(JSON.stringify({ 
       success: true, 
-      message: "Licencia verificada con éxito.",
+      message: "Licencia verificada con éxito (" + activeDevices.length + "/" + deviceLimit + " dispositivos registrados).",
       client: data[licenseRowIndex][1] // Devolver el nombre del cliente
     }));
 
