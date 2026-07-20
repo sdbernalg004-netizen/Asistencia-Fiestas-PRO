@@ -5,13 +5,14 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUU
 
 // CONFIGURACIÓN DE FIREBASE (Pega aquí la configuración de tu proyecto Firebase para sincro en tiempo real)
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
-  projectId: "TU_PROYECTO",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyBgUmpivXlg8-6-pYaJOfReTLmWYeZ8GQ8",
+  authDomain: "acceso-qr-pro.firebaseapp.com",
+  databaseURL: "https://acceso-qr-pro-default-rtdb.firebaseio.com",
+  projectId: "acceso-qr-pro",
+  storageBucket: "acceso-qr-pro.firebasestorage.app",
+  messagingSenderId: "912113755513",
+  appId: "1:912113755513:web:8dcf14636a5438bf28fba8",
+  measurementId: "G-WQXM1XX8NW"
 };
 
 // Sanitizar llaves para Firebase (evita caracteres inválidos en rutas JSON)
