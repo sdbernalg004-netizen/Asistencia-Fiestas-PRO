@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.sdbernalg004_netizen.twa",
+        "sha256_cert_fingerprints": ["54:AC:4B:57:BD:02:48:D5:A1:6A:2B:24:94:03:4E:CD:15:C0:ED:95:7F:AE:4A:1B:7C:09:6B:5E:FF:B0:04:18"]
+    }
+  }
+]
