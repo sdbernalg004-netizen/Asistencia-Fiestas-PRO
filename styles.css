@@ -1004,3 +1004,51 @@ button:disabled {
     justify-content: center;
     gap: 8px;
 }
+
+.indicators-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+@media (max-width: 768px) {
+    .indicators-wrapper {
+        align-items: center;
+        width: 100%;
+        margin-top: 10px;
+    }
+}
+.sync-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.sync-status-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background: #94a3b8;
+    border-radius: 50%;
+    display: inline-block;
+}
+.sync-status-indicator.online {
+    border-color: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+.sync-status-indicator.online .dot {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+.sync-status-indicator.offline {
+    border-color: rgba(245, 158, 11, 0.2);
+    color: var(--warning);
+}
+.sync-status-indicator.offline .dot {
+    background: var(--warning);
+    box-shadow: 0 0 8px var(--warning);
+}

@@ -129,10 +129,12 @@ const activationKeyInput = document.getElementById("activation-key-input");
 const activateAppBtn = document.getElementById("activate-app-btn");
 const activationErrorMsg = document.getElementById("activation-error-msg");
 const errorText = document.getElementById("error-text");
+const syncStatusIndicator = document.getElementById("sync-status-indicator");
 
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
     checkAppActivation();
+    setupFirebaseSyncIndicator();
     loadSavedBranding();
     setupTabs();
     setupFileLoaders();
@@ -144,6 +146,26 @@ document.addEventListener("DOMContentLoaded", () => {
     downloadExcelBtn.addEventListener("click", exportUpdatedExcel);
     generateQrsBtn.addEventListener("click", generateBulkQrsZip);
 });
+
+function setupFirebaseSyncIndicator() {
+    if (!syncStatusIndicator) return;
+    if (!isFirebaseActive) {
+        syncStatusIndicator.className = "sync-status-indicator offline";
+        syncStatusIndicator.innerHTML = `<span class="dot"></span> Sincro: Desactivada`;
+        return;
+    }
+    
+    const connectedRef = firebase.database().ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            syncStatusIndicator.className = "sync-status-indicator online";
+            syncStatusIndicator.innerHTML = `<span class="dot"></span> Sincro: En Línea`;
+        } else {
+            syncStatusIndicator.className = "sync-status-indicator offline";
+            syncStatusIndicator.innerHTML = `<span class="dot"></span> Sincro: Offline (Esperando red)`;
+        }
+    });
+}
 
 // Lógica de Activación y Licencias
 function checkAppActivation() {
