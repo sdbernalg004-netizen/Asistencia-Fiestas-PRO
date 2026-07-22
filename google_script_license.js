@@ -112,13 +112,17 @@ function handleLicenseRequest(e) {
       guestLimit = 9999; // Por defecto 9999 (sin límite) si no está definido
     }
 
+    var allowQrGenRaw = String(data[licenseRowIndex][6] || "SI").trim().toUpperCase(); // Columna G (Generar QR)
+    var allowQrGen = (allowQrGenRaw !== "NO" && allowQrGenRaw !== "FALSE");
+
     // Si el dispositivo actual ya está registrado en la lista
     if (activeDevices.indexOf(deviceId) !== -1) {
       return output.setContent(JSON.stringify({ 
         success: true, 
         message: "Licencia verificada (Dispositivo ya registrado).",
         client: data[licenseRowIndex][1],
-        guestLimit: guestLimit
+        guestLimit: guestLimit,
+        allowQrGen: allowQrGen
       }));
     }
     
@@ -142,7 +146,8 @@ function handleLicenseRequest(e) {
       success: true, 
       message: "Licencia verificada con éxito (" + activeDevices.length + "/" + deviceLimit + " dispositivos registrados).",
       client: data[licenseRowIndex][1], // Devolver el nombre del cliente
-      guestLimit: guestLimit
+      guestLimit: guestLimit,
+      allowQrGen: allowQrGen
     }));
 
   } catch(error) {

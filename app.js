@@ -231,6 +231,11 @@ function handleActivationSubmit() {
                 } else {
                     localStorage.setItem("pro-license-guest-limit", "9999");
                 }
+                if (typeof data.allowQrGen !== "undefined") {
+                    localStorage.setItem("pro-license-allow-qr-gen", String(data.allowQrGen));
+                } else {
+                    localStorage.setItem("pro-license-allow-qr-gen", "true");
+                }
                 licenseLockScreen.classList.add("hidden");
                 playSound('success');
                 alert("¡Aplicación activada y validada con éxito!");
@@ -500,9 +505,15 @@ function handleExcelFile(file) {
             toggleCameraBtn.removeAttribute("disabled");
             downloadExcelBtn.removeAttribute("disabled");
             
-            // Enable QR Generator PRO
-            generateQrsBtn.removeAttribute("disabled");
-            qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs.`;
+            // Enable or Disable QR Generator PRO based on Plan
+            const allowQrGen = localStorage.getItem("pro-license-allow-qr-gen") !== "false";
+            if (allowQrGen) {
+                generateQrsBtn.removeAttribute("disabled");
+                qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs.`;
+            } else {
+                generateQrsBtn.setAttribute("disabled", "true");
+                qrGenMsg.innerHTML = `<i class="ti ti-lock text-warning"></i> Tu plan contratado es <strong>Solo Escáner</strong>. Para generar códigos QR en masa, actualiza a la Licencia Completa o PRO.`;
+            }
             
             // Sincronización en tiempo real Firebase
             if (isFirebaseActive && activeSheetName) {
