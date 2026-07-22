@@ -226,6 +226,11 @@ function handleActivationSubmit() {
                 if (data.client) {
                     localStorage.setItem("pro-license-client", data.client);
                 }
+                if (data.guestLimit) {
+                    localStorage.setItem("pro-license-guest-limit", String(data.guestLimit));
+                } else {
+                    localStorage.setItem("pro-license-guest-limit", "9999");
+                }
                 licenseLockScreen.classList.add("hidden");
                 playSound('success');
                 alert("¡Aplicación activada y validada con éxito!");
@@ -460,6 +465,14 @@ function handleExcelFile(file) {
             
             if (jsonData.length === 0) {
                 alert("El archivo Excel está vacío.");
+                return;
+            }
+            
+            // Validar Límite Dinámico de Invitados según la licencia contratada
+            const limitRaw = localStorage.getItem("pro-license-guest-limit");
+            const guestLimit = limitRaw ? parseInt(limitRaw, 10) : 9999;
+            if (jsonData.length > guestLimit) {
+                alert(`⚠️ LÍMITE DE LICENCIA ALCANZADO\n\nTu licencia actual permite hasta ${guestLimit} invitados por evento. El archivo que estás intentando cargar contiene ${jsonData.length} invitados.\n\nPara ampliar tu capacidad a 600 o más invitados, por favor contacta a soporte o actualiza tu plan en nuestro sitio web.`);
                 return;
             }
             

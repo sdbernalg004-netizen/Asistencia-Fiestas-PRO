@@ -106,12 +106,19 @@ function handleLicenseRequest(e) {
       });
     }
     
+    var guestLimitRaw = data[licenseRowIndex][5];                            // Columna F (Límite Invitados)
+    var guestLimit = parseInt(guestLimitRaw, 10);
+    if (isNaN(guestLimit) || guestLimit <= 0) {
+      guestLimit = 9999; // Por defecto 9999 (sin límite) si no está definido
+    }
+
     // Si el dispositivo actual ya está registrado en la lista
     if (activeDevices.indexOf(deviceId) !== -1) {
       return output.setContent(JSON.stringify({ 
         success: true, 
         message: "Licencia verificada (Dispositivo ya registrado).",
-        client: data[licenseRowIndex][1]
+        client: data[licenseRowIndex][1],
+        guestLimit: guestLimit
       }));
     }
     
@@ -134,7 +141,8 @@ function handleLicenseRequest(e) {
     return output.setContent(JSON.stringify({ 
       success: true, 
       message: "Licencia verificada con éxito (" + activeDevices.length + "/" + deviceLimit + " dispositivos registrados).",
-      client: data[licenseRowIndex][1] // Devolver el nombre del cliente
+      client: data[licenseRowIndex][1], // Devolver el nombre del cliente
+      guestLimit: guestLimit
     }));
 
   } catch(error) {
