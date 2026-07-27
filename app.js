@@ -1,9 +1,27 @@
-// Core Application Logic for QR Event Check-In PRO
+/**
+ * ============================================================================
+ * LÓGICA PRINCIPAL DE LA APLICACIÓN - QR EVENT CHECK-IN PRO (app.js)
+ * ============================================================================
+ * Estructura del código:
+ * 1. CONFIGURACIÓN & FIREBASE: URL de Apps Script y sincronización en tiempo real.
+ * 2. CONTROL DE LICENCIAS: Verificación multidispositivo y candado de activación.
+ * 3. SINTETIZADOR DE SONIDOS: Feedback auditivo al escanear (Éxito / Duplicado / Error).
+ * 4. HERRAMIENTAS PRO & BRANDING: Cambio dinámico de colores, logos y título del evento.
+ * 5. LECTOR DE EXCEL & LÍMITES: Carga de lista de invitados con límites dinámicos de plan.
+ * 6. TABLA Y BÚSQUEDA: Filtros de asistieron/pendientes y barra de búsqueda en tiempo real.
+ * 7. ESCÁNER DE CÁMARA QR: Motor de cámara nativa con aceleración por hardware.
+ * 8. GENERADOR MASIVO DE BOLETOS QR: Creación y descarga en archivo comprimido (.ZIP).
+ * 9. FUSIÓN MULTIPUERTA OFFLINE: Consolidador de Excels de múltiples puertas.
+ */
 
-// CONFIGURACIÓN DE LICENCIA (Pega aquí la URL de tu Google Apps Script una vez implementado)
+// ----------------------------------------------------------------------------
+// 1. CONFIGURACIÓN Y SERVIDORES (GOOGLE SHEETS Y FIREBASE)
+// ----------------------------------------------------------------------------
+
+// URL del Web App de Google Apps Script para validar licencias en la nube
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUUaj-gdc2WcOV0NeDBassrXUQFuA1ERAl8mIlolRi1mlybKZ9i67x1lt-w/exec";
 
-// CONFIGURACIÓN DE FIREBASE (Pega aquí la configuración de tu proyecto Firebase para sincro en tiempo real)
+// Configuración de la base de datos en tiempo real de Firebase (Realtime Database)
 const firebaseConfig = {
   apiKey: "AIzaSyBgUmpivXlg8-6-pYaJOfReTLmWYeZ8GQ8",
   authDomain: "acceso-qr-pro.firebaseapp.com",
@@ -15,12 +33,15 @@ const firebaseConfig = {
   measurementId: "G-WQXM1XX8NW"
 };
 
-// Sanitizar llaves para Firebase (evita caracteres inválidos en rutas JSON)
+/**
+ * Sanitizar claves para Firebase (reemplaza caracteres no permitidos en JSON)
+ */
 function sanitizeFirebaseKey(val) {
     if (!val) return "default";
     return String(val).replace(/[\.\#\$\[\]]/g, "_");
 }
 
+// Inicializar Firebase si las credenciales son válidas
 const isFirebaseActive = typeof firebase !== 'undefined' && firebaseConfig.databaseURL && !firebaseConfig.databaseURL.includes("TU_PROYECTO");
 let dbRef = null;
 
@@ -28,6 +49,9 @@ if (isFirebaseActive) {
     firebase.initializeApp(firebaseConfig);
 }
 
+/**
+ * Enviar un registro de asistencia en tiempo real a Firebase Realtime Database
+ */
 function syncCheckInToFirebase(guestId, attended, time, door = "Local") {
     if (!isFirebaseActive) return;
     const licenseKey = localStorage.getItem("pro-active-license-key") || "TEST-123-KEY";
@@ -141,11 +165,48 @@ document.addEventListener("DOMContentLoaded", () => {
     setupSearchAndFilters();
     setupCameraOptions();
     setupBrandingHandlers();
-    setupMergeHandlers();
+    setupGuideModal();
     
     downloadExcelBtn.addEventListener("click", exportUpdatedExcel);
     generateQrsBtn.addEventListener("click", generateBulkQrsZip);
+    
+    const downloadTemplateBtn = document.getElementById("download-template-btn");
+    if (downloadTemplateBtn) {
+        downloadTemplateBtn.addEventListener("click", downloadSampleTemplate);
+    }
 });
+
+function setupGuideModal() {
+    const openGuideBtn = document.getElementById("open-guide-btn");
+    const guideModal = document.getElementById("guide-modal");
+    const closeGuideModalBtn = document.getElementById("close-guide-modal-btn");
+    const guideModalOkBtn = document.getElementById("guide-modal-ok-btn");
+
+    if (openGuideBtn && guideModal) {
+        openGuideBtn.addEventListener("click", () => guideModal.classList.remove("hidden"));
+        if (closeGuideModalBtn) closeGuideModalBtn.addEventListener("click", () => guideModal.classList.add("hidden"));
+        if (guideModalOkBtn) guideModalOkBtn.addEventListener("click", () => guideModal.classList.add("hidden"));
+    }
+}
+
+/**
+ * GENERADOR DE PLANTILLA EXCEL DE EJEMPLO
+ * Crea un archivo .xlsx limpio con las columnas correctas e invitados ficticios.
+ */
+function downloadSampleTemplate() {
+    const sampleData = [
+        { "ID": "101", "Invitado": "Juan Pérez", "Cantidad": 2, "QR": "INV-101", "Asistencia": "" },
+        { "ID": "102", "Invitado": "María Rodríguez", "Cantidad": 1, "QR": "INV-102", "Asistencia": "" },
+        { "ID": "103", "Invitado": "Carlos López", "Cantidad": 3, "QR": "INV-103", "Asistencia": "" },
+        { "ID": "104", "Invitado": "Ana Martínez", "Cantidad": 2, "QR": "INV-104", "Asistencia": "" },
+        { "ID": "105", "Invitado": "Luis García", "Cantidad": 1, "QR": "INV-105", "Asistencia": "" }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: ["ID", "Invitado", "Cantidad", "QR", "Asistencia"] });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invitados");
+    XLSX.writeFile(workbook, "Plantilla_Invitados_AccesoQR.xlsx");
+}
 
 function setupFirebaseSyncIndicator() {
     if (!syncStatusIndicator) return;
