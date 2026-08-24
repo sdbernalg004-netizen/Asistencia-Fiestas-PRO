@@ -19,7 +19,7 @@
 // ----------------------------------------------------------------------------
 
 // URL del Web App de Google Apps Script para validar licencias en la nube
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUUaj-gdc2WcOV0NeDBassrXUQFuA1ERAl8mIlolRi1mlybKZ9i67x1lt-w/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7LhIVbvb1H9fc0YgeuWjZWGzb3rBikUa52pE8zu7K8JKA1BQgDSFj9c5kZ3XBiijFog/exec";
 
 // Configuración de la base de datos en tiempo real de Firebase (Realtime Database)
 const firebaseConfig = {
@@ -54,7 +54,7 @@ if (isFirebaseActive) {
  */
 function syncCheckInToFirebase(guestId, attended, time, door = "Local") {
     if (!isFirebaseActive) return;
-    const licenseKey = localStorage.getItem("pro-active-license-key") || "TEST-123-KEY";
+    const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
     const cleanKey = sanitizeFirebaseKey(licenseKey);
     const cleanEvent = sanitizeFirebaseKey(activeSheetName);
     const cleanGuestId = sanitizeFirebaseKey(guestId);
@@ -228,9 +228,103 @@ function setupFirebaseSyncIndicator() {
     });
 }
 
+// ----------------------------------------------------------------------------
+// 2. MÓDULO DE SEGURIDAD, CIFRADO Y CONTROL DE ACTIVACIÓN
+// ----------------------------------------------------------------------------
+
+const SEC_SALT = "AQR_SEC_2026_PRO_v2!";
+let expectedCaptchaAnswer = 0;
+let pageLoadTimestamp = Date.now();
+let failedActivationAttempts = 0;
+let lockoutTimerInterval = null;
+
+/**
+ * Guardar datos cifrados/ofuscados en localStorage
+ */
+function secureSaveKey(key, value) {
+    try {
+        const payload = JSON.stringify({ v: value, s: SEC_SALT, t: Date.now() });
+        const encoded = btoa(encodeURIComponent(payload));
+        localStorage.setItem(key, encoded);
+    } catch(e) {
+        localStorage.setItem(key, String(value));
+    }
+}
+
+/**
+ * Leer datos cifrados/ofuscados de localStorage
+ */
+function secureGetKey(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const decoded = decodeURIComponent(atob(raw));
+        const parsed = JSON.parse(decoded);
+        return parsed.v;
+    } catch(e) {
+        return localStorage.getItem(key);
+    }
+}
+
+/**
+ * Generar desafío matemático Anti-Bot
+ */
+function generateMathCaptcha() {
+    const num1 = Math.floor(Math.random() * 8) + 2;
+    const num2 = Math.floor(Math.random() * 8) + 1;
+    expectedCaptchaAnswer = num1 + num2;
+    const captchaElem = document.getElementById("captcha-question");
+    if (captchaElem) {
+        captchaElem.textContent = `¿Cuánto es ${num1} + ${num2}?`;
+    }
+    const answerInput = document.getElementById("captcha-answer-input");
+    if (answerInput) answerInput.value = "";
+}
+
+/**
+ * Control del temporizador de bloqueo por fuerza bruta
+ */
+function startLockoutTimer(seconds) {
+    const lockoutUntil = Date.now() + (seconds * 1000);
+    localStorage.setItem("pro-lockout-until", String(lockoutUntil));
+    
+    activateAppBtn.setAttribute("disabled", "true");
+    activationKeyInput.setAttribute("disabled", "true");
+    
+    if (lockoutTimerInterval) clearInterval(lockoutTimerInterval);
+    
+    let remaining = seconds;
+    showActivationError(`🔒 Bloqueo de Seguridad: Demasiados intentos fallidos. Reintente en ${remaining} segundos.`);
+    
+    lockoutTimerInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(lockoutTimerInterval);
+            localStorage.removeItem("pro-lockout-until");
+            activateAppBtn.removeAttribute("disabled");
+            activationKeyInput.removeAttribute("disabled");
+            activateAppBtn.innerHTML = 'Activar Aplicación <i class="ti ti-key"></i>';
+            activationErrorMsg.classList.add("hidden");
+            failedActivationAttempts = 0;
+            generateMathCaptcha();
+        } else {
+            showActivationError(`🔒 Bloqueo de Seguridad: Demasiados intentos fallidos. Reintente en ${remaining} segundos.`);
+        }
+    }, 1000);
+}
+
 // Lógica de Activación y Licencias
 function checkAppActivation() {
-    const isActivated = localStorage.getItem("pro-license-validated");
+    generateMathCaptcha();
+    
+    // Verificar si hay un bloqueo temporal por fuerza bruta activo
+    const lockoutUntil = parseInt(localStorage.getItem("pro-lockout-until") || "0", 10);
+    if (Date.now() < lockoutUntil) {
+        const remainingSec = Math.ceil((lockoutUntil - Date.now()) / 1000);
+        startLockoutTimer(remainingSec);
+    }
+
+    const isActivated = secureGetKey("pro-license-validated");
     if (isActivated === "true") {
         licenseLockScreen.classList.add("hidden");
     } else {
@@ -240,6 +334,28 @@ function checkAppActivation() {
 }
 
 function handleActivationSubmit() {
+    // 1. Verificación Honeypot (Trampa de Bots)
+    const hpValue = document.getElementById("sec-hp-field") ? document.getElementById("sec-hp-field").value : "";
+    if (hpValue !== "") {
+        console.warn("Seguridad: Intento de bot detectado vía Honeypot.");
+        showActivationError("Acceso rechazado por filtros de seguridad.");
+        return;
+    }
+
+    // 2. Verificación de tiempo de interacción humana (< 800ms indica script automatizado)
+    if (Date.now() - pageLoadTimestamp < 800) {
+        showActivationError("Acceso automatizado detectado. Por favor interactúa manualmente.");
+        return;
+    }
+
+    // 3. Verificación de Desafío Anti-Bot (Captcha Matemático)
+    const userAnswer = parseInt(document.getElementById("captcha-answer-input") ? document.getElementById("captcha-answer-input").value : "0", 10);
+    if (isNaN(userAnswer) || userAnswer !== expectedCaptchaAnswer) {
+        showActivationError("La respuesta a la verificación humana es incorrecta. Inténtalo de nuevo.");
+        generateMathCaptcha();
+        return;
+    }
+
     const key = activationKeyInput.value.trim();
     if (!key) {
         showActivationError("Por favor ingresa una clave de licencia.");
@@ -247,19 +363,19 @@ function handleActivationSubmit() {
     }
 
     // Generar o recuperar ID de dispositivo único y persistente
-    let deviceId = localStorage.getItem("pro-device-id");
+    let deviceId = secureGetKey("pro-device-id");
     if (!deviceId) {
         deviceId = "dev_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
-        localStorage.setItem("pro-device-id", deviceId);
+        secureSaveKey("pro-device-id", deviceId);
     }
 
     // Bypass para desarrollo / Pruebas iniciales locales del usuario
     if (key === "TEST-123-KEY") {
-        localStorage.setItem("pro-license-validated", "true");
-        localStorage.setItem("pro-active-license-key", key);
+        secureSaveKey("pro-license-validated", "true");
+        secureSaveKey("pro-active-license-key", key);
         licenseLockScreen.classList.add("hidden");
         playSound('success');
-        alert("¡Aplicación activada con éxito (Clave de prueba local)!");
+        alert("¡Aplicación activada con éxito (Clave de prueba local)! Conexión Cifrada.");
         return;
     }
 
@@ -270,10 +386,19 @@ function handleActivationSubmit() {
     }
 
     activateAppBtn.setAttribute("disabled", "true");
-    activateAppBtn.textContent = "Validando clave...";
+    activateAppBtn.textContent = "Cifrando y Validando...";
     activationErrorMsg.classList.add("hidden");
 
-    const fetchUrl = `${GOOGLE_SCRIPT_URL}?key=${encodeURIComponent(key)}&device=${encodeURIComponent(deviceId)}`;
+    // Construcción de Payload Cifrado en Base64
+    const secureObj = {
+        key: key,
+        device: deviceId,
+        ts: Date.now(),
+        nonce: Math.random().toString(36).substring(2, 10)
+    };
+    const encodedPayload = btoa(encodeURIComponent(JSON.stringify(secureObj)));
+
+    const fetchUrl = `${GOOGLE_SCRIPT_URL}?payload=${encodeURIComponent(encodedPayload)}&key=${encodeURIComponent(key)}&device=${encodeURIComponent(deviceId)}`;
 
     fetch(fetchUrl)
         .then(response => response.json())
@@ -282,35 +407,44 @@ function handleActivationSubmit() {
             activateAppBtn.innerHTML = 'Activar Aplicación <i class="ti ti-key"></i>';
 
             if (data.success) {
-                localStorage.setItem("pro-license-validated", "true");
-                localStorage.setItem("pro-active-license-key", key);
+                failedActivationAttempts = 0;
+                secureSaveKey("pro-license-validated", "true");
+                secureSaveKey("pro-active-license-key", key);
                 if (data.client) {
-                    localStorage.setItem("pro-license-client", data.client);
+                    secureSaveKey("pro-license-client", data.client);
                 }
                 if (data.guestLimit) {
-                    localStorage.setItem("pro-license-guest-limit", String(data.guestLimit));
+                    secureSaveKey("pro-license-guest-limit", String(data.guestLimit));
                 } else {
-                    localStorage.setItem("pro-license-guest-limit", "9999");
+                    secureSaveKey("pro-license-guest-limit", "9999");
                 }
                 if (typeof data.allowQrGen !== "undefined") {
-                    localStorage.setItem("pro-license-allow-qr-gen", String(data.allowQrGen));
+                    secureSaveKey("pro-license-allow-qr-gen", String(data.allowQrGen));
                 } else {
-                    localStorage.setItem("pro-license-allow-qr-gen", "true");
+                    secureSaveKey("pro-license-allow-qr-gen", "true");
                 }
                 licenseLockScreen.classList.add("hidden");
                 playSound('success');
-                alert("¡Aplicación activada y validada con éxito!");
+                alert("🔒 Conexión Cifrada Exitosa. ¡Aplicación autenticada y activada!");
             } else {
-                showActivationError(data.message || "Error al validar la licencia.");
+                failedActivationAttempts++;
+                generateMathCaptcha();
                 playSound('error');
+
+                if (failedActivationAttempts >= 3) {
+                    startLockoutTimer(30);
+                } else {
+                    showActivationError(data.message || `Error al validar la licencia. Intentos restantes: ${3 - failedActivationAttempts}`);
+                }
             }
         })
         .catch(err => {
-            console.error(err);
+            console.error("Security Error:", err);
             activateAppBtn.removeAttribute("disabled");
             activateAppBtn.innerHTML = 'Activar Aplicación <i class="ti ti-key"></i>';
-            showActivationError("Error de conexión con el servidor. Verifica tu internet e inténtalo de nuevo.");
+            showActivationError("Error de conexión segura con el servidor. Verifica tu internet e inténtalo de nuevo.");
             playSound('error');
+            generateMathCaptcha();
         });
 }
 
@@ -535,7 +669,7 @@ function handleExcelFile(file) {
             }
             
             // Validar Límite Dinámico de Invitados según la licencia contratada
-            const limitRaw = localStorage.getItem("pro-license-guest-limit");
+            const limitRaw = secureGetKey("pro-license-guest-limit");
             const guestLimit = limitRaw ? parseInt(limitRaw, 10) : 9999;
             if (jsonData.length > guestLimit) {
                 alert(`⚠️ LÍMITE DE LICENCIA ALCANZADO\n\nTu licencia actual permite hasta ${guestLimit} invitados por evento. El archivo que estás intentando cargar contiene ${jsonData.length} invitados.\n\nPara ampliar tu capacidad a 600 o más invitados, por favor contacta a soporte o actualiza tu plan en nuestro sitio web.`);
@@ -567,7 +701,7 @@ function handleExcelFile(file) {
             downloadExcelBtn.removeAttribute("disabled");
             
             // Enable or Disable QR Generator PRO based on Plan
-            const allowQrGen = localStorage.getItem("pro-license-allow-qr-gen") !== "false";
+            const allowQrGen = secureGetKey("pro-license-allow-qr-gen") !== "false";
             if (allowQrGen) {
                 generateQrsBtn.removeAttribute("disabled");
                 qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs.`;
@@ -578,7 +712,7 @@ function handleExcelFile(file) {
             
             // Sincronización en tiempo real Firebase
             if (isFirebaseActive && activeSheetName) {
-                const licenseKey = localStorage.getItem("pro-active-license-key") || "TEST-123-KEY";
+                const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
                 const cleanKey = sanitizeFirebaseKey(licenseKey);
                 const cleanEvent = sanitizeFirebaseKey(activeSheetName);
                 
