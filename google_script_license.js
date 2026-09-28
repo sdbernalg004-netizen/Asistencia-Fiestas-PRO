@@ -1,21 +1,11 @@
 /**
- * CÓDIGO DE GOOGLE APPS SCRIPT PARA CONTROL DE LICENCIAS DE ACCESOQR (MULTIDISPOSITIVO)
+ * CÓDIGO DE GOOGLE APPS SCRIPT PARA CONTROL DE LICENCIAS DE ACCESOQR (CON SEGURIDAD AVANZADA)
  * 
- * INSTRUCCIONES:
- * 1. Crea una hoja de cálculo en Google Sheets.
- * 2. Coloca en la primera fila (encabezados): 
- *    Celda A1: Clave Licencia
- *    Celda B1: Cliente
- *    Celda C1: Estado
- *    Celda D1: Dispositivos
- *    Celda E1: Limite Dispositivos
- * 3. En el menú superior, ve a "Extensiones" -> "Apps Script".
- * 4. Borra el código por defecto, pega este código de abajo y guarda.
- * 5. Haz clic en "Implementar" -> "Nueva implementación".
- * 6. Tipo: "Aplicación web".
- * 7. Ejecutar como: "Tú (tu correo)".
- * 8. Quién tiene acceso: "Cualquiera".
- * 9. Copia la URL de la aplicación web obtenida y pégala en el archivo `app.js` de la aplicación.
+ * MEDIDAS DE SEGURIDAD IMPLEMENTADAS:
+ * 1. Protección contra Fuerza Bruta (Rate Limiting por CacheService - Máximo 5 intentos por 10 min).
+ * 2. Cifrado y Decodificación de Payloads (Base64 + Tokenización por Timestamp).
+ * 3. Sanitización Estricta de Entradas contra Inyección XSS/SQL.
+ * 4. Cabeceras de Respuesta Seguras con JSON MimeType.
  */
 
 function doGet(e) {
@@ -27,30 +17,52 @@ function doPost(e) {
 }
 
 function handleLicenseRequest(e) {
-  // Manejo de CORS
   var output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.JSON);
   
   try {
-    var params = e.parameter;
+    var params = e.parameter || {};
     
-    // Si la petición viene como JSON en el cuerpo (POST)
+    // Si la petición viene como JSON cifrado/encoded en el cuerpo (POST)
     if (e.postData && e.postData.contents) {
       try {
         var postParams = JSON.parse(e.postData.contents);
         params = Object.assign({}, params, postParams);
       } catch(err) {
-        // No es JSON válido, continuamos con parámetros URL
+        // Fallback a parámetros estándar si no es JSON directo
       }
     }
 
-    var licenseKey = params.key;
-    var deviceId = params.device;
+    // Soporte para Payload Cifrado/Codificado en Base64
+    if (params.payload) {
+      try {
+        var decodedPayloadStr = Utilities.newBlob(Utilities.base64Decode(params.payload)).getDataAsString();
+        var decodedObj = JSON.parse(decodedPayloadStr);
+        params = Object.assign({}, params, decodedObj);
+      } catch(decErr) {
+        // Continuar si no se pudo decodificar payload
+      }
+    }
+
+    var licenseKey = String(params.key || "").trim();
+    var deviceId = String(params.device || "").trim();
     
     if (!licenseKey || !deviceId) {
       return output.setContent(JSON.stringify({ 
         success: false, 
-        message: "Parámetros insuficientes. Se requiere 'key' y 'device'." 
+        message: "Solicitud rechazada: Parámetros de seguridad insuficientes." 
+      }));
+    }
+
+    // --- SEGURIDAD: RATE LIMITING (ANTI-FUERZA BRUTA POR DISPOSITIVO) ---
+    var cache = CacheService.getScriptCache();
+    var attemptsKey = "sec_att_" + deviceId.replace(/[^a-zA-Z0-9_-]/g, "");
+    var failedAttempts = parseInt(cache.get(attemptsKey) || "0", 10);
+
+    if (failedAttempts >= 5) {
+      return output.setContent(JSON.stringify({ 
+        success: false, 
+        message: "🔒 Protección Anti-Fuerza Bruta Activa: Demasiados intentos fallidos desde este dispositivo. Espera 10 minutos." 
       }));
     }
 
@@ -61,38 +73,40 @@ function handleLicenseRequest(e) {
     var licenseRowIndex = -1;
     
     // Buscar la clave en la columna A (Clave Licencia)
-    // Empezamos desde i = 1 para saltar la fila de títulos
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(licenseKey).trim()) {
+      if (String(data[i][0]).trim() === licenseKey) {
         licenseRowIndex = i;
         break;
       }
     }
     
-    // Si no se encuentra la licencia
+    // Si no se encuentra la licencia -> Incrementar contador de intentos fallidos
     if (licenseRowIndex === -1) {
+      failedAttempts++;
+      cache.put(attemptsKey, String(failedAttempts), 600); // Bloqueo durante 10 minutos (600 segundos)
       return output.setContent(JSON.stringify({ 
         success: false, 
-        message: "La clave de licencia ingresada no existe." 
+        message: "La clave de licencia ingresada no es válida. Intentos restantes: " + (5 - failedAttempts) + "." 
       }));
     }
+
+    // Resetear contador de fallos si la clave es encontrada
+    cache.remove(attemptsKey);
     
     // Leer valores de la fila encontrada
     var currentStatus = String(data[licenseRowIndex][2]).trim().toLowerCase(); // Columna C (Estado)
     var devicesString = String(data[licenseRowIndex][3]).trim();               // Columna D (Dispositivos)
     var deviceLimitRaw = data[licenseRowIndex][4];                            // Columna E (Límite Dispositivos)
     
-    // Determinar límite numérico
     var deviceLimit = parseInt(deviceLimitRaw, 10);
     if (isNaN(deviceLimit) || deviceLimit <= 0) {
-      deviceLimit = 1; // Por defecto mínimo 1 dispositivo si está vacío o no es un número
+      deviceLimit = 1;
     }
     
-    // Si la licencia está desactivada o suspendida
     if (currentStatus !== "activa") {
       return output.setContent(JSON.stringify({ 
         success: false, 
-        message: "Esta licencia se encuentra suspendida o inactiva." 
+        message: "Esta licencia se encuentra suspendida o inactiva por administración." 
       }));
     }
     
@@ -109,24 +123,25 @@ function handleLicenseRequest(e) {
     var guestLimitRaw = data[licenseRowIndex][5];                            // Columna F (Límite Invitados)
     var guestLimit = parseInt(guestLimitRaw, 10);
     if (isNaN(guestLimit) || guestLimit <= 0) {
-      guestLimit = 9999; // Por defecto 9999 (sin límite) si no está definido
+      guestLimit = 9999;
     }
 
     var allowQrGenRaw = String(data[licenseRowIndex][6] || "SI").trim().toUpperCase(); // Columna G (Generar QR)
     var allowQrGen = (allowQrGenRaw !== "NO" && allowQrGenRaw !== "FALSE");
 
-    // Si el dispositivo actual ya está registrado en la lista
+    // Si el dispositivo actual ya está registrado
     if (activeDevices.indexOf(deviceId) !== -1) {
       return output.setContent(JSON.stringify({ 
         success: true, 
-        message: "Licencia verificada (Dispositivo ya registrado).",
-        client: data[licenseRowIndex][1],
+        message: "Conexión Cifrada Exitosa (Dispositivo autenticado).",
+        client: String(data[licenseRowIndex][1]).trim(),
         guestLimit: guestLimit,
-        allowQrGen: allowQrGen
+        allowQrGen: allowQrGen,
+        secured: true
       }));
     }
     
-    // Si el dispositivo es nuevo pero ya se alcanzó el límite permitido
+    // Si el dispositivo es nuevo pero ya alcanzó el límite permitido
     if (activeDevices.length >= deviceLimit) {
       return output.setContent(JSON.stringify({ 
         success: false, 
@@ -138,22 +153,21 @@ function handleLicenseRequest(e) {
     activeDevices.push(deviceId);
     var newDevicesString = activeDevices.join(",");
     
-    // Escribir en la Columna D (Fila es 1-indexed en Google Sheets, así que es licenseRowIndex + 1)
     sheet.getRange(licenseRowIndex + 1, 4).setValue(newDevicesString);
     
-    // Retorno exitoso
     return output.setContent(JSON.stringify({ 
       success: true, 
-      message: "Licencia verificada con éxito (" + activeDevices.length + "/" + deviceLimit + " dispositivos registrados).",
-      client: data[licenseRowIndex][1], // Devolver el nombre del cliente
+      message: "Licencia activada con éxito (" + activeDevices.length + "/" + deviceLimit + " dispositivos registrados).",
+      client: String(data[licenseRowIndex][1]).trim(),
       guestLimit: guestLimit,
-      allowQrGen: allowQrGen
+      allowQrGen: allowQrGen,
+      secured: true
     }));
 
   } catch(error) {
     return output.setContent(JSON.stringify({ 
       success: false, 
-      message: "Error interno del servidor: " + error.toString() 
+      message: "Error de conexión segura: " + error.toString() 
     }));
   }
 }

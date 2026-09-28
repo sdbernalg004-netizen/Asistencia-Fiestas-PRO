@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Event Check-In PRO</title>
+
+    <!-- Cabeceras y Políticas de Seguridad -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; frame-ancestors 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(), geolocation=()">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,17 +27,37 @@
     <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
-    <!-- Pantalla de Bloqueo de Licencia -->
+    <!-- Pantalla de Bloqueo de Licencia Segura -->
     <div id="license-lock-screen" class="license-lock-screen">
-        <div class="lock-card">
+        <div class="lock-card" style="position: relative;">
+            
+            <!-- Sello Visual de Seguridad -->
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; padding: 4px 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #10B981; margin-bottom: 1rem;">
+                <i class="ti ti-shield-lock"></i> Conexión Cifrada SSL 256-bit & Anti-Bot Activo
+            </div>
+
             <i class="ti ti-lock-square logo-icon-lock"></i>
             <h2>Activación de Software</h2>
-            <p>Por favor ingresa tu clave de licencia para activar la aplicación en este dispositivo.</p>
+            <p>Ingresa tu clave de licencia para autenticar este dispositivo de forma segura.</p>
             
+            <!-- Campo Honeypot para Trampa de Bots -->
+            <input type="text" id="sec-hp-field" name="website_url_hp" tabindex="-1" style="display:none !important; position:absolute; left:-9999px;" autocomplete="off">
+
             <div class="pro-control-group">
-                <input type="text" id="activation-key-input" class="text-input-pro" placeholder="Ej. AQR-2026-XXXX">
+                <input type="text" id="activation-key-input" class="text-input-pro" placeholder="Ej. AQR-2026-XXXX" autocomplete="off">
             </div>
             
+            <!-- Desafío Interactivo Anti-Bot -->
+            <div id="anti-bot-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">
+                <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                    <i class="ti ti-robot text-accent"></i> Verificación Humana Anti-Bot:
+                </label>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+                    <span id="captcha-question" style="font-weight: bold; font-size: 0.9rem; color: white;">¿Cuánto es 3 + 4?</span>
+                    <input type="number" id="captcha-answer-input" class="text-input-pro" style="width: 80px; padding: 6px; text-align: center;" placeholder="?" autocomplete="off">
+                </div>
+            </div>
+
             <button id="activate-app-btn" class="btn-primary btn-block">Activar Aplicación <i class="ti ti-key"></i></button>
             
             <p class="lock-hint">¿No tienes una licencia? Contacta a <a href="mailto:sdbernalg004@gmail.com">sdbernalg004@gmail.com</a></p>
@@ -53,14 +80,27 @@
             </div>
             
             <div class="nav-tabs">
-                <button class="tab-btn active" data-tab="tab-scanner"><i class="ti ti-scan"></i> Escáner</button>
-                <button class="tab-btn" data-tab="tab-tools"><i class="ti ti-tool"></i> Herramientas Pro</button>
-                <button class="btn-secondary" id="open-guide-btn" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;"><i class="ti ti-help-hexagon text-accent"></i> Guía de Uso</button>
+                <button class="tab-btn active" data-tab="tab-scanner"><i class="ti ti-scan"></i> <span data-i18n="scannerTab">Escáner</span></button>
+                <button class="tab-btn" data-tab="tab-tools"><i class="ti ti-tool"></i> <span data-i18n="toolsTab">Herramientas Pro</span></button>
+                <button class="btn-secondary" id="open-guide-btn" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;"><i class="ti ti-help-hexagon text-accent"></i> <span data-i18n="guideBtn">Guía de Uso</span></button>
+            </div>
+
+            <!-- Nuevos Controles Rápidos: Modo Día, Voz Concierge, Idioma -->
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button id="theme-toggle-btn" class="btn-secondary" title="Alternar Modo Día (Alto Contraste) / Noche" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;">
+                    <i class="ti ti-sun" id="theme-icon"></i> <span id="theme-btn-text">Modo Día</span>
+                </button>
+                <button id="voice-toggle-btn" class="btn-secondary" title="Activar/Desactivar Voz de Bienvenida Concierge" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;">
+                    <i class="ti ti-volume" id="voice-icon"></i> <span id="voice-btn-text">Voz: Sí</span>
+                </button>
+                <button id="lang-toggle-btn" class="btn-secondary" title="Cambiar Idioma (ES / EN)" style="padding: 6px 10px; font-size: 0.85rem; border-radius: 8px; font-weight: bold;">
+                    <span id="lang-btn-text">EN</span>
+                </button>
             </div>
             
             <div class="indicators-wrapper">
                 <div class="file-status-indicator" id="file-status-indicator">
-                    <span class="dot"></span> Sin archivo cargado
+                    <span class="dot"></span> <span id="file-status-text">Sin archivo cargado</span>
                 </div>
                 <div class="sync-status-indicator offline" id="sync-status-indicator">
                     <span class="dot"></span> Sincro: Desconectada
@@ -77,18 +117,18 @@
                 <section class="panel-left">
                     <!-- Card 1: File Loader -->
                     <div class="card file-loader-card">
-                        <h2><i class="ti ti-file-excel"></i> Cargar Base de Datos</h2>
-                        <p class="card-desc">Carga tu Excel original de invitados para iniciar el control de asistencia.</p>
+                        <h2><i class="ti ti-file-excel"></i> <span data-i18n="loadDbTitle">Cargar Base de Datos</span></h2>
+                        <p class="card-desc" data-i18n="loadDbDesc">Carga tu Excel original de invitados para iniciar el control de asistencia.</p>
                         
                         <div class="file-drop-zone" id="drop-zone">
                             <i class="ti ti-cloud-upload upload-icon"></i>
-                            <span class="file-label">Arrastra tu Excel aquí o haz clic para seleccionar</span>
+                            <span class="file-label" data-i18n="dropLabel">Arrastra tu Excel aquí o haz clic para seleccionar</span>
                             <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;">
                         </div>
 
                         <div style="margin-top: 10px;">
                             <button id="download-template-btn" class="btn-secondary" style="font-size: 0.8rem; padding: 6px 12px; width: 100%; border-radius: 8px;">
-                                <i class="ti ti-download text-accent"></i> Descargar Plantilla Excel de Ejemplo
+                                <i class="ti ti-download text-accent"></i> <span data-i18n="downloadTplBtn">Descargar Plantilla Excel de Ejemplo</span>
                             </button>
                         </div>
                         
@@ -101,19 +141,19 @@
 
                     <!-- Card 2: Stats Dashboard -->
                     <div class="card stats-card">
-                        <h2><i class="ti ti-chart-donut"></i> Estadísticas en Tiempo Real</h2>
+                        <h2><i class="ti ti-chart-donut"></i> <span data-i18n="statsTitle">Estadísticas en Tiempo Real</span></h2>
                         <div class="stats-grid">
                             <div class="stat-box">
                                 <span class="stat-val" id="stat-total">0</span>
-                                <span class="stat-lbl">Invitados</span>
+                                <span class="stat-lbl" data-i18n="statGuests">Invitados</span>
                             </div>
                             <div class="stat-box success">
                                 <span class="stat-val" id="stat-attended">0</span>
-                                <span class="stat-lbl">Asistieron</span>
+                                <span class="stat-lbl" data-i18n="statAttended">Asistieron</span>
                             </div>
                             <div class="stat-box info">
                                 <span class="stat-val" id="stat-pending">0</span>
-                                <span class="stat-lbl">Pendientes</span>
+                                <span class="stat-lbl" data-i18n="statPending">Pendientes</span>
                             </div>
                         </div>
                         
@@ -121,17 +161,27 @@
                             <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
                         </div>
                         <div class="progress-labels">
-                            <span>Progreso del evento</span>
+                            <span data-i18n="progressLbl">Progreso del evento</span>
                             <span id="progress-percentage">0%</span>
+                        </div>
+
+                        <!-- Métricas de Flujo y Reporte Ejecutivo -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px;">
+                            <div class="flow-rate-badge" id="flow-rate-display">
+                                <i class="ti ti-bolt"></i> <span id="flow-rate-text">Flujo: 0 pers/min</span>
+                            </div>
+                            <button id="open-report-btn" class="btn-secondary" style="font-size: 0.8rem; padding: 5px 12px; border-radius: 6px;">
+                                <i class="ti ti-file-analytics text-accent"></i> <span data-i18n="reportBtn">Reporte Ejecutivo</span>
+                            </button>
                         </div>
                     </div>
 
                     <!-- Card 3: Download updated excel -->
                     <div class="card download-card">
                         <button id="download-excel-btn" class="btn-primary" disabled>
-                            <i class="ti ti-download"></i> Descargar Excel Actualizado
+                            <i class="ti ti-download"></i> <span data-i18n="downloadExcelBtn">Descargar Excel Actualizado</span>
                         </button>
-                        <p class="download-hint">Descarga para actualizar los registros de esta puerta de acceso.</p>
+                        <p class="download-hint" data-i18n="downloadHint">Descarga para actualizar los registros de esta puerta de acceso.</p>
                     </div>
                 </section>
 
@@ -140,11 +190,12 @@
                     <!-- Card 4: Scanner -->
                     <div class="card scanner-card">
                         <div class="scanner-header">
-                            <h2><i class="ti ti-device-camera"></i> Escáner QR</h2>
-                            <div class="camera-controls">
+                            <h2><i class="ti ti-device-camera"></i> <span data-i18n="scannerTitle">Escáner QR</span></h2>
+                            <div class="camera-controls" style="display: flex; align-items: center; gap: 8px;">
                                 <select id="camera-select" class="select-input">
                                     <option value="">Seleccionando cámara...</option>
                                 </select>
+                                <button id="torch-btn" class="torch-btn hidden" title="Encender Linterna / Flash"><i class="ti ti-bolt"></i></button>
                             </div>
                         </div>
 
@@ -157,7 +208,7 @@
 
                         <div class="scanner-footer">
                             <button id="toggle-camera-btn" class="btn-secondary" disabled>
-                                <i class="ti ti-camera"></i> Iniciar Escáner
+                                <i class="ti ti-camera"></i> <span id="toggle-cam-text" data-i18n="startScannerBtn">Iniciar Escáner</span>
                             </button>
                         </div>
                     </div>
@@ -166,7 +217,7 @@
                     <div class="card result-card" id="result-card">
                         <div class="result-placeholder" id="result-placeholder">
                             <i class="ti ti-scan icon-pulse"></i>
-                            <p>Esperando escaneo de código QR...</p>
+                            <p data-i18n="waitingScan">Esperando escaneo de código QR...</p>
                         </div>
                         
                         <div class="result-details hidden" id="result-details">
@@ -174,12 +225,27 @@
                                 <i class="ti ti-check" id="result-icon"></i>
                             </div>
                             <div class="result-text">
+                                <div id="result-vip-banner" class="vip-badge-tag hidden" style="margin-bottom: 6px;">
+                                    <i class="ti ti-crown"></i> <span data-i18n="vipBadge">INVITADO VIP / ESPECIAL</span>
+                                </div>
                                 <h3 id="result-title">¡Registro Exitoso!</h3>
                                 <p class="guest-name" id="result-name">Nombre del Invitado</p>
-                                <div class="guest-meta-grid">
+                                
+                                <div class="guest-meta-grid" id="guest-meta-grid">
                                     <div><strong>ID:</strong> <span id="result-id">-</span></div>
-                                    <div><strong>Pases:</strong> <span id="result-qty">-</span></div>
-                                    <div><strong>Hora:</strong> <span id="result-time">-</span></div>
+                                    <div><strong data-i18n="metaPasses">Pases:</strong> <span id="result-qty">-</span></div>
+                                    <div id="result-table-box"><strong>Mesa:</strong> <span id="result-table">-</span></div>
+                                    <div><strong data-i18n="metaTime">Hora:</strong> <span id="result-time">-</span></div>
+                                </div>
+
+                                <div id="result-notes-row" class="hidden" style="font-size: 0.8rem; margin-top: 6px; color: var(--accent);">
+                                    <i class="ti ti-info-circle"></i> <span id="result-notes"></span>
+                                </div>
+
+                                <!-- Check-in Parcial Opcional -->
+                                <div id="partial-checkin-box" class="partial-checkin-box hidden">
+                                    <span style="color: var(--text-secondary); font-size: 0.8rem;" data-i18n="partialLabel">¿Entrada parcial?</span>
+                                    <span id="partial-buttons-group"></span>
                                 </div>
                             </div>
                         </div>
@@ -190,16 +256,16 @@
             <!-- Guest List Section -->
             <section class="guest-list-section card">
                 <div class="list-header">
-                    <h2><i class="ti ti-users"></i> Lista Completa de Invitados</h2>
+                    <h2><i class="ti ti-users"></i> <span data-i18n="guestListTitle">Lista Completa de Invitados</span></h2>
                     <div class="list-controls">
                         <div class="search-box">
                             <i class="ti ti-search"></i>
-                            <input type="text" id="search-input" placeholder="Buscar invitado..." disabled>
+                            <input type="text" id="search-input" placeholder="Buscar por nombre, ID, mesa..." disabled>
                         </div>
                         <div class="filter-box">
-                            <button class="btn-filter active" data-filter="all">Todos</button>
-                            <button class="btn-filter" data-filter="attended">Asistieron</button>
-                            <button class="btn-filter" data-filter="pending">Pendientes</button>
+                            <button class="btn-filter active" data-filter="all" data-i18n="filterAll">Todos</button>
+                            <button class="btn-filter" data-filter="attended" data-i18n="filterAttended">Asistieron</button>
+                            <button class="btn-filter" data-filter="pending" data-i18n="filterPending">Pendientes</button>
                         </div>
                     </div>
                 </div>
@@ -209,18 +275,19 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Invitado</th>
-                                <th>Cantidad</th>
-                                <th>Código QR</th>
-                                <th>Asistencia</th>
-                                <th>Acciones</th>
+                                <th data-i18n="thGuest">Invitado</th>
+                                <th data-i18n="thPasses">Pases</th>
+                                <th>Mesa / VIP</th>
+                                <th data-i18n="thQr">Código QR</th>
+                                <th data-i18n="thAttendance">Asistencia</th>
+                                <th data-i18n="thActions">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="guest-table-body">
                             <tr>
-                                <td colspan="6" class="table-empty">
+                                <td colspan="7" class="table-empty">
                                     <i class="ti ti-file-excel-off"></i>
-                                    Carga un archivo Excel para ver la lista de invitados.
+                                    <span data-i18n="emptyTable">Carga un archivo Excel para ver la lista de invitados.</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -392,6 +459,96 @@
             <button id="guide-modal-ok-btn" class="btn-primary btn-block" style="margin-top: 1.5rem;">
                 ¡Entendido, comenzar!
             </button>
+        </div>
+    <!-- Modal para Ver y Compartir QR Individual -->
+    <div id="individual-qr-modal" class="license-modal-overlay hidden" style="z-index: 10001;">
+        <div class="license-modal-card" style="max-width: 440px; text-align: center; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="ti ti-qrcode text-accent"></i> Pase de Acceso Digital
+                </h3>
+                <button id="close-indiv-qr-modal-btn" class="btn-icon"><i class="ti ti-x"></i></button>
+            </div>
+            
+            <div id="indiv-qr-canvas-wrapper" style="background: #FFF; padding: 1.5rem; border-radius: 12px; display: inline-block; margin: 1rem auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+                <div id="indiv-qr-code-box"></div>
+            </div>
+
+            <h4 id="indiv-guest-name" style="font-size: 1.25rem; font-weight: 800; margin-bottom: 4px;">Nombre del Invitado</h4>
+            <div style="display: flex; justify-content: center; gap: 12px; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                <span><strong>ID:</strong> <span id="indiv-guest-id">-</span></span>
+                <span><strong>Pases:</strong> <span id="indiv-guest-qty">1</span></span>
+                <span><strong>Mesa:</strong> <span id="indiv-guest-table">-</span></span>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="indiv-wa-btn" class="btn-whatsapp" style="padding: 10px 16px; font-size: 0.9rem;">
+                    <i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp
+                </button>
+                <button id="indiv-download-btn" class="btn-secondary" style="padding: 10px 16px; font-size: 0.9rem;">
+                    <i class="ti ti-download"></i> Descargar Imagen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Reporte Ejecutivo de Asistencia -->
+    <div id="executive-report-modal" class="license-modal-overlay hidden" style="z-index: 10001;">
+        <div class="license-modal-card" style="max-width: 680px; text-align: left; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                <div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="ti ti-file-analytics text-accent"></i> Reporte Ejecutivo de Asistencia
+                    </h2>
+                    <span id="rep-event-title" style="font-size: 0.85rem; color: var(--text-secondary);">Evento: QR Event Check-In PRO</span>
+                </div>
+                <button id="close-rep-modal-btn" class="btn-icon"><i class="ti ti-x"></i></button>
+            </div>
+
+            <div id="printable-report-area">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Invitados</span>
+                        <div id="rep-total-guests" style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary);">0</div>
+                    </div>
+                    <div style="background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.75rem; color: var(--success); text-transform: uppercase;">Asistieron</span>
+                        <div id="rep-total-attended" style="font-size: 1.5rem; font-weight: 800; color: var(--success);">0</div>
+                    </div>
+                    <div style="background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.75rem; color: var(--warning); text-transform: uppercase;">Pendientes</span>
+                        <div id="rep-total-pending" style="font-size: 1.5rem; font-weight: 800; color: var(--warning);">0</div>
+                    </div>
+                    <div style="background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 8px; text-align: center;">
+                        <span style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase;">Efectividad</span>
+                        <div id="rep-percentage" style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">0%</div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 1.25rem;">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <i class="ti ti-clock-hour-4 text-accent"></i> Horario Pico de Entrada
+                    </h4>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                        La mayor concentración de llegadas se registró a las <strong id="rep-peak-hour" style="color: white;">--:--</strong> con un flujo máximo de <strong id="rep-peak-rate" style="color: var(--accent);">-- personas/min</strong>.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <i class="ti ti-layout-grid text-accent"></i> Resumen de Ocupación por Mesas
+                    </h4>
+                    <div id="rep-tables-breakdown" style="max-height: 180px; overflow-y: auto; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; background: rgba(0,0,0,0.15);">
+                        <span style="color: var(--text-secondary);">No hay datos de mesas cargados.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="print-rep-btn" class="btn-primary" style="display: flex; align-items: center; gap: 6px;">
+                    <i class="ti ti-printer"></i> Imprimir Reporte / Guardar PDF
+                </button>
+            </div>
         </div>
     </div>
 

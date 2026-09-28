@@ -1052,3 +1052,273 @@ button:disabled {
     background: var(--warning);
     box-shadow: 0 0 8px var(--warning);
 }
+
+/* ============================================================================
+ * ☀️ MODO DÍA DE ALTO CONTRASTE (SUNLIGHT MODE PARA EXTERIORES / JARDINES)
+ * ============================================================================ */
+body.light-theme {
+    --bg-main: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F1F5F9;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --border: #CBD5E1;
+    --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .logo-container h1 {
+    background: linear-gradient(135deg, #0F172A, #334155);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+body.light-theme .stat-box {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+}
+
+body.light-theme .nav-tabs {
+    background: #E2E8F0;
+    border-color: #CBD5E1;
+}
+
+body.light-theme .tab-btn {
+    color: #475569;
+}
+
+body.light-theme .tab-btn.active {
+    background: #FFFFFF;
+    color: var(--accent);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .guest-table th {
+    background: #F1F5F9;
+    color: #334155;
+    border-color: #E2E8F0;
+}
+
+body.light-theme .guest-table td {
+    border-color: #E2E8F0;
+    color: #0F172A;
+}
+
+body.light-theme .guest-table tr:hover {
+    background: rgba(99, 102, 241, 0.04);
+}
+
+body.light-theme .guest-meta-grid {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+}
+
+body.light-theme .select-input,
+body.light-theme .search-input {
+    background: #FFFFFF;
+    color: #0F172A;
+    border-color: #CBD5E1;
+}
+
+body.light-theme .btn-filter {
+    background: #FFFFFF;
+    color: #475569;
+    border-color: #CBD5E1;
+}
+
+body.light-theme .btn-filter.active {
+    background: var(--accent);
+    color: #FFFFFF;
+}
+
+/* ============================================================================
+ * 👑 ESTILOS VIP / INVITADOS ESPECIALES
+ * ============================================================================ */
+.result-card.vip {
+    border-left: 6px solid #F59E0B;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.03));
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+    animation: vipGlow 2s infinite alternate;
+}
+
+@keyframes vipGlow {
+    from { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+    to { box-shadow: 0 0 30px rgba(245, 158, 11, 0.4); }
+}
+
+.vip .result-status-icon-wrapper {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
+}
+
+.vip-badge-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #F59E0B, #B45309);
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.badge-vip-table {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+/* ============================================================================
+ * 📲 BOTÓN WHATSAPP Y ACCIONES DE TABLA
+ * ============================================================================ */
+.btn-whatsapp {
+    background-color: #25D366;
+    color: #FFFFFF;
+    border: none;
+    padding: 5px 9px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: var(--transition);
+}
+
+.btn-whatsapp:hover {
+    background-color: #1EBE5D;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+}
+
+.btn-qr-view {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid var(--accent);
+    color: var(--text-primary);
+    padding: 5px 9px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: var(--transition);
+}
+
+.btn-qr-view:hover {
+    background: var(--accent);
+    color: #FFF;
+}
+
+/* ============================================================================
+ * 🔦 BOTÓN LINTERNA / FLASH
+ * ============================================================================ */
+.torch-btn {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #FFF;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 1.1rem;
+}
+
+.torch-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.torch-btn.active {
+    background: #F59E0B;
+    border-color: #F59E0B;
+    color: #000;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.8);
+}
+
+/* ============================================================================
+ * ⚡ METRICAS DE VELOCIDAD DE ENTRADA
+ * ============================================================================ */
+.flow-rate-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* ============================================================================
+ * 👥 CHECK-IN PARCIAL
+ * ============================================================================ */
+.partial-checkin-box {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+}
+
+.partial-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.partial-btn:hover {
+    background: var(--accent);
+    color: #FFF;
+}
+
+/* ============================================================================
+ * 📄 REPORTE EJECUTIVO IMPRIMIBLE (@media print)
+ * ============================================================================ */
+@media print {
+    body {
+        background: #FFF !important;
+        color: #000 !important;
+        padding: 0 !important;
+    }
+    .app-header, .panel-right, .nav-tabs, .file-loader-card, .list-controls, .btn-action, .download-card, .pro-card {
+        display: none !important;
+    }
+    .app-container {
+        max-width: 100% !important;
+    }
+    .stats-card, .guest-list-section {
+        box-shadow: none !important;
+        border: 1px solid #CCC !important;
+        page-break-inside: avoid;
+    }
+    .executive-report-header {
+        display: block !important;
+        margin-bottom: 2rem;
+        text-align: center;
+        border-bottom: 2px solid #333;
+        padding-bottom: 1rem;
+    }
+}
+

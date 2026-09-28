@@ -155,6 +155,135 @@ const activationErrorMsg = document.getElementById("activation-error-msg");
 const errorText = document.getElementById("error-text");
 const syncStatusIndicator = document.getElementById("sync-status-indicator");
 
+// New Feature State & DOM Elements
+let isVoiceEnabled = localStorage.getItem("pro-voice-enabled") !== "false";
+let currentLang = localStorage.getItem("pro-lang") || "es";
+let isLightTheme = localStorage.getItem("pro-theme") === "light";
+let isTorchOn = false;
+let activeVideoTrack = null;
+let checkinTimestamps = []; // { time, qty, hour }
+
+const themeToggleBtn = document.getElementById("theme-toggle-btn");
+const themeIcon = document.getElementById("theme-icon");
+const themeBtnText = document.getElementById("theme-btn-text");
+
+const voiceToggleBtn = document.getElementById("voice-toggle-btn");
+const voiceIcon = document.getElementById("voice-icon");
+const voiceBtnText = document.getElementById("voice-btn-text");
+
+const langToggleBtn = document.getElementById("lang-toggle-btn");
+const langBtnText = document.getElementById("lang-btn-text");
+
+const torchBtn = document.getElementById("torch-btn");
+
+const flowRateDisplay = document.getElementById("flow-rate-display");
+const flowRateText = document.getElementById("flow-rate-text");
+const openReportBtn = document.getElementById("open-report-btn");
+
+const resultVipBanner = document.getElementById("result-vip-banner");
+const resultTableBox = document.getElementById("result-table-box");
+const resultTable = document.getElementById("result-table");
+const resultNotesRow = document.getElementById("result-notes-row");
+const resultNotes = document.getElementById("result-notes");
+const partialCheckinBox = document.getElementById("partial-checkin-box");
+const partialButtonsGroup = document.getElementById("partial-buttons-group");
+
+const individualQrModal = document.getElementById("individual-qr-modal");
+const closeIndivQrModalBtn = document.getElementById("close-indiv-qr-modal-btn");
+const indivQrCodeBox = document.getElementById("indiv-qr-code-box");
+const indivGuestName = document.getElementById("indiv-guest-name");
+const indivGuestId = document.getElementById("indiv-guest-id");
+const indivGuestQty = document.getElementById("indiv-guest-qty");
+const indivGuestTable = document.getElementById("indiv-guest-table");
+const indivWaBtn = document.getElementById("indiv-wa-btn");
+const indivDownloadBtn = document.getElementById("indiv-download-btn");
+
+const executiveReportModal = document.getElementById("executive-report-modal");
+const closeRepModalBtn = document.getElementById("close-rep-modal-btn");
+const repEventTitle = document.getElementById("rep-event-title");
+const repTotalGuests = document.getElementById("rep-total-guests");
+const repTotalAttended = document.getElementById("rep-total-attended");
+const repTotalPending = document.getElementById("rep-total-pending");
+const repPercentage = document.getElementById("rep-percentage");
+const repPeakHour = document.getElementById("rep-peak-hour");
+const repPeakRate = document.getElementById("rep-peak-rate");
+const repTablesBreakdown = document.getElementById("rep-tables-breakdown");
+const printRepBtn = document.getElementById("print-rep-btn");
+
+// Dictionary for Internationalization (ES / EN)
+const i18n = {
+    es: {
+        scannerTab: "Escáner",
+        toolsTab: "Herramientas Pro",
+        guideBtn: "Guía de Uso",
+        loadDbTitle: "Cargar Base de Datos",
+        loadDbDesc: "Carga tu Excel original de invitados para iniciar el control de asistencia.",
+        dropLabel: "Arrastra tu Excel aquí o haz clic para seleccionar",
+        downloadTplBtn: "Descargar Plantilla Excel de Ejemplo",
+        statsTitle: "Estadísticas en Tiempo Real",
+        statGuests: "Invitados",
+        statAttended: "Asistieron",
+        statPending: "Pendientes",
+        progressLbl: "Progreso del evento",
+        reportBtn: "Reporte Ejecutivo",
+        downloadExcelBtn: "Descargar Excel Actualizado",
+        downloadHint: "Descarga para actualizar los registros de esta puerta de acceso.",
+        scannerTitle: "Escáner QR",
+        startScannerBtn: "Iniciar Escáner",
+        stopScannerBtn: "Detener Escáner",
+        waitingScan: "Esperando escaneo de código QR...",
+        vipBadge: "INVITADO VIP / ESPECIAL",
+        metaPasses: "Pases:",
+        metaTime: "Hora:",
+        partialLabel: "¿Entrada parcial?",
+        guestListTitle: "Lista Completa de Invitados",
+        filterAll: "Todos",
+        filterAttended: "Asistieron",
+        filterPending: "Pendientes",
+        thGuest: "Invitado",
+        thPasses: "Pases",
+        thQr: "Código QR",
+        thAttendance: "Asistencia",
+        thActions: "Acciones",
+        emptyTable: "Carga un archivo Excel para ver la lista de invitados."
+    },
+    en: {
+        scannerTab: "Scanner",
+        toolsTab: "Pro Tools",
+        guideBtn: "User Guide",
+        loadDbTitle: "Load Database",
+        loadDbDesc: "Load your original Excel guest list to start attendance check-in.",
+        dropLabel: "Drag and drop your Excel here or click to select",
+        downloadTplBtn: "Download Sample Excel Template",
+        statsTitle: "Real-Time Statistics",
+        statGuests: "Guests",
+        statAttended: "Attended",
+        statPending: "Pending",
+        progressLbl: "Event progress",
+        reportBtn: "Executive Report",
+        downloadExcelBtn: "Download Updated Excel",
+        downloadHint: "Download to update records for this entrance gate.",
+        scannerTitle: "QR Scanner",
+        startScannerBtn: "Start Scanner",
+        stopScannerBtn: "Stop Scanner",
+        waitingScan: "Waiting for QR code scan...",
+        vipBadge: "VIP / SPECIAL GUEST",
+        metaPasses: "Passes:",
+        metaTime: "Time:",
+        partialLabel: "Partial check-in?",
+        guestListTitle: "Complete Guest List",
+        filterAll: "All",
+        filterAttended: "Attended",
+        filterPending: "Pending",
+        thGuest: "Guest",
+        thPasses: "Passes",
+        thQr: "QR Code",
+        thAttendance: "Attendance",
+        thActions: "Actions",
+        emptyTable: "Load an Excel file to view the guest list."
+    }
+};
+
 // Initialization
 document.addEventListener("DOMContentLoaded", () => {
     checkAppActivation();
@@ -174,6 +303,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (downloadTemplateBtn) {
         downloadTemplateBtn.addEventListener("click", downloadSampleTemplate);
     }
+    
+    setupNewFeatureControls();
 });
 
 function setupGuideModal() {
@@ -195,14 +326,14 @@ function setupGuideModal() {
  */
 function downloadSampleTemplate() {
     const sampleData = [
-        { "ID": "101", "Invitado": "Juan Pérez", "Cantidad": 2, "QR": "INV-101", "Asistencia": "" },
-        { "ID": "102", "Invitado": "María Rodríguez", "Cantidad": 1, "QR": "INV-102", "Asistencia": "" },
-        { "ID": "103", "Invitado": "Carlos López", "Cantidad": 3, "QR": "INV-103", "Asistencia": "" },
-        { "ID": "104", "Invitado": "Ana Martínez", "Cantidad": 2, "QR": "INV-104", "Asistencia": "" },
-        { "ID": "105", "Invitado": "Luis García", "Cantidad": 1, "QR": "INV-105", "Asistencia": "" }
+        { "ID": "101", "Invitado": "Juan Pérez", "Cantidad": 2, "Mesa": "Mesa 1", "VIP": "VIP", "Teléfono": "5512345678", "Notas": "Vegetariano", "QR": "INV-101", "Asistencia": "" },
+        { "ID": "102", "Invitado": "María Rodríguez", "Cantidad": 1, "Mesa": "Mesa 1", "VIP": "VIP", "Teléfono": "5587654321", "Notas": "", "QR": "INV-102", "Asistencia": "" },
+        { "ID": "103", "Invitado": "Carlos López", "Cantidad": 3, "Mesa": "Mesa 2", "VIP": "No", "Teléfono": "5533221100", "Notas": "", "QR": "INV-103", "Asistencia": "" },
+        { "ID": "104", "Invitado": "Ana Martínez", "Cantidad": 2, "Mesa": "Mesa 2", "VIP": "No", "Teléfono": "5544556677", "Notas": "Alergia mariscos", "QR": "INV-104", "Asistencia": "" },
+        { "ID": "105", "Invitado": "Luis García", "Cantidad": 1, "Mesa": "Mesa 3", "VIP": "No", "Teléfono": "5599887766", "Notas": "", "QR": "INV-105", "Asistencia": "" }
     ];
 
-    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: ["ID", "Invitado", "Cantidad", "QR", "Asistencia"] });
+    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: ["ID", "Invitado", "Cantidad", "Mesa", "VIP", "Teléfono", "Notas", "QR", "Asistencia"] });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Invitados");
     XLSX.writeFile(workbook, "Plantilla_Invitados_AccesoQR.xlsx");
@@ -499,6 +630,26 @@ function playSound(type) {
             osc.start();
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
             osc.stop(ctx.currentTime + 0.4);
+        } else if (type === 'vip') {
+            // Fanfarria triunfal VIP (Arpegio ascendente C5 -> E5 -> G5 -> C6)
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, idx) => {
+                setTimeout(() => {
+                    try {
+                        const vCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const vOsc = vCtx.createOscillator();
+                        const vGain = vCtx.createGain();
+                        vOsc.type = 'triangle';
+                        vOsc.connect(vGain);
+                        vGain.connect(vCtx.destination);
+                        vOsc.frequency.setValueAtTime(freq, vCtx.currentTime);
+                        vGain.gain.setValueAtTime(0.15, vCtx.currentTime);
+                        vOsc.start();
+                        vGain.gain.exponentialRampToValueAtTime(0.001, vCtx.currentTime + 0.3);
+                        vOsc.stop(vCtx.currentTime + 0.3);
+                    } catch(err) {}
+                }, idx * 110);
+            });
         }
     } catch (e) {
         console.warn("Audio feedback error:", e);
@@ -680,10 +831,21 @@ function handleExcelFile(file) {
             originalColumnsOrder = firstRowKeys;
 
             guestData = jsonData.map((row, index) => {
+                const rawName = String(row["Invitado"] || row["invitado"] || row["Nombre"] || row["nombre"] || "Sin Nombre").trim();
+                const tableVal = String(row["Mesa"] || row["mesa"] || row["Table"] || row["table"] || row["Zona"] || row["zona"] || "-").trim();
+                const vipVal = String(row["VIP"] || row["vip"] || row["Categoría"] || row["Categoria"] || row["Tipo"] || "").trim().toUpperCase();
+                const isVip = (vipVal === "SI" || vipVal === "SÍ" || vipVal === "TRUE" || vipVal === "VIP" || rawName.toUpperCase().includes("(VIP)"));
+                const phoneVal = String(row["Telefono"] || row["telefono"] || row["Teléfono"] || row["Celular"] || row["celular"] || row["Phone"] || "").trim();
+                const notesVal = String(row["Notas"] || row["notas"] || row["Observaciones"] || row["Alergias"] || "").trim();
+
                 return {
                     id: String(row["ID"] || row["id"] || index + 1).trim(),
-                    name: String(row["Invitado"] || row["invitado"] || row["Nombre"] || row["nombre"] || "Sin Nombre").trim(),
+                    name: rawName,
                     quantity: parseInt(row["Cantidad"] || row["cantidad"] || row["Pases"] || row["pases"] || 1),
+                    table: tableVal,
+                    isVip: isVip,
+                    phone: phoneVal,
+                    notes: notesVal,
                     qrValue: String(row["QR"] || row["qr"] || row["Codigo"] || "").trim(),
                     attendance: String(row["Asistencia"] || row["asistencia"] || "").trim(),
                     rawRow: row
@@ -830,6 +992,8 @@ function renderGuestTable() {
         const matchesSearch = 
             guest.name.toLowerCase().includes(searchTerm) || 
             guest.id.toLowerCase().includes(searchTerm) || 
+            (guest.table && guest.table.toLowerCase().includes(searchTerm)) ||
+            (guest.phone && guest.phone.includes(searchTerm)) ||
             guest.qrValue.toLowerCase().includes(searchTerm);
             
         const isAttended = guest.attendance && guest.attendance.toLowerCase().trim() !== "";
@@ -841,9 +1005,9 @@ function renderGuestTable() {
     if (filteredList.length === 0) {
         guestTableBody.innerHTML = `
             <tr>
-                <td colspan="6" class="table-empty">
+                <td colspan="7" class="table-empty">
                     <i class="ti ti-search-off"></i>
-                    No se encontraron invitados.
+                    ${currentLang === 'en' ? 'No guests found.' : 'No se encontraron invitados.'}
                 </td>
             </tr>
         `;
@@ -854,42 +1018,108 @@ function renderGuestTable() {
         const hasAttended = guest.attendance && guest.attendance.toLowerCase().trim() !== "";
         const statusBadge = hasAttended 
             ? `<span class="badge success"><i class="ti ti-check"></i> ${guest.attendance}</span>` 
-            : `<span class="badge pending">Pendiente</span>`;
+            : `<span class="badge pending">${currentLang === 'en' ? 'Pending' : 'Pendiente'}</span>`;
             
         const actionButton = hasAttended
-            ? `<button class="btn-action btn-secondary" onclick="toggleAttendance('${guest.id}', true)"><i class="ti ti-rotate-clockwise"></i> Revertir</button>`
-            : `<button class="btn-action btn-checkin" onclick="toggleAttendance('${guest.id}', false)"><i class="ti ti-circle-check"></i> Registrar</button>`;
+            ? `<button class="btn-action btn-secondary" onclick="toggleAttendance('${guest.id}', true)"><i class="ti ti-rotate-clockwise"></i> ${currentLang === 'en' ? 'Revert' : 'Revertir'}</button>`
+            : `<button class="btn-action btn-checkin" onclick="toggleAttendance('${guest.id}', false)"><i class="ti ti-circle-check"></i> ${currentLang === 'en' ? 'Check-in' : 'Registrar'}</button>`;
+
+        const vipBadgeHtml = guest.isVip ? `<span class="vip-badge-tag"><i class="ti ti-crown"></i> VIP</span> ` : "";
+        const tableBadgeHtml = (guest.table && guest.table !== "-") 
+            ? `<span class="badge-vip-table"><i class="ti ti-armchair"></i> ${guest.table}</span>` 
+            : `<span style="color:var(--text-secondary)">-</span>`;
 
         return `
             <tr>
                 <td><strong>${guest.id}</strong></td>
-                <td>${guest.name}</td>
+                <td>${vipBadgeHtml}<strong>${guest.name}</strong></td>
                 <td>${guest.quantity}</td>
+                <td>${tableBadgeHtml}</td>
                 <td><code>${guest.qrValue || guest.id}</code></td>
                 <td>${statusBadge}</td>
-                <td>${actionButton}</td>
+                <td>
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        ${actionButton}
+                        <button class="btn-whatsapp" title="Enviar pase por WhatsApp" onclick="sharePassWhatsApp('${guest.id}')"><i class="ti ti-brand-whatsapp"></i></button>
+                        <button class="btn-qr-view" title="Ver / Descargar Código QR" onclick="openIndividualQrModal('${guest.id}')"><i class="ti ti-qrcode"></i></button>
+                    </div>
+                </td>
             </tr>
         `;
     }).join('');
 }
 
 function toggleAttendance(id, revert = false) {
-    const guestIndex = guestData.findIndex(g => g.id === id);
-    if (guestIndex === -1) return;
+    const guest = guestData.find(g => g.id === id);
+    if (!guest) return;
 
     if (revert) {
+        const guestIndex = guestData.findIndex(g => g.id === id);
         guestData[guestIndex].attendance = "";
         guestData[guestIndex].rawRow["Asistencia"] = "";
         syncCheckInToFirebase(id, false, "", "Revertido Manual");
+        updateDashboard();
+        renderGuestTable();
+        resetResultDisplay();
     } else {
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        guestData[guestIndex].attendance = `Sí (${time})`;
-        guestData[guestIndex].rawRow["Asistencia"] = `Sí (${time})`;
-        syncCheckInToFirebase(id, true, time, "Manual");
+        processCheckIn(guest, guest.quantity, "Manual");
     }
+}
+
+function processCheckInById(id, qty) {
+    const guest = guestData.find(g => g.id === id);
+    if (guest) {
+        processCheckIn(guest, qty, "Parcial");
+    }
+}
+
+function processCheckIn(guest, qtyToCheckIn = null, source = "Escáner") {
+    const guestIndex = guestData.findIndex(g => g.id === guest.id);
+    if (guestIndex === -1) return;
+
+    const isFullCheckIn = (qtyToCheckIn === null || qtyToCheckIn >= guest.quantity);
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let attendanceStr = "";
+    if (isFullCheckIn) {
+        attendanceStr = `Sí (${time})`;
+    } else {
+        attendanceStr = `Parcial (${qtyToCheckIn}/${guest.quantity} a las ${time})`;
+    }
+
+    guestData[guestIndex].attendance = attendanceStr;
+    guestData[guestIndex].rawRow["Asistencia"] = attendanceStr;
+
+    // Registrar métrica de tiempo para velocidad
+    checkinTimestamps.push({
+        time: Date.now(),
+        qty: isFullCheckIn ? guest.quantity : qtyToCheckIn,
+        hour: time.split(":")[0] + ":00"
+    });
+    updateFlowRate();
+
+    // Sincronizar en tiempo real a Firebase
+    syncCheckInToFirebase(guest.id, true, time, `${source} ${!isFullCheckIn ? '(' + qtyToCheckIn + '/' + guest.quantity + ')' : ''}`);
 
     updateDashboard();
     renderGuestTable();
+
+    // Mostrar tarjeta de resultado completa
+    displayResult(
+        guest.isVip ? 'vip' : 'success',
+        guest.isVip ? (currentLang === 'en' ? '👑 Welcome VIP Guest!' : '👑 ¡Bienvenido Invitado VIP!') : (currentLang === 'en' ? 'Successful Check-in!' : '¡Registro Exitoso!'),
+        guest.name,
+        guest.id,
+        isFullCheckIn ? guest.quantity : `${qtyToCheckIn}/${guest.quantity}`,
+        attendanceStr,
+        guest.table,
+        guest.notes,
+        guest
+    );
+
+    // Audio & Voz Concierge
+    playSound(guest.isVip ? 'vip' : 'success');
+    speakWelcome(guest, isFullCheckIn ? guest.quantity : qtyToCheckIn);
 }
 
 function setupSearchAndFilters() {
@@ -942,7 +1172,7 @@ function startScanner() {
     resetResultDisplay();
     isScannerActive = true;
     
-    toggleCameraBtn.innerHTML = `<i class="ti ti-camera-off"></i> Detener Escáner`;
+    toggleCameraBtn.innerHTML = `<i class="ti ti-camera-off"></i> ${currentLang === 'en' ? 'Stop Scanner' : 'Detener Escáner'}`;
     toggleCameraBtn.className = "btn-secondary btn-danger-hover";
     scannerOverlay.classList.remove("hidden");
 
@@ -958,7 +1188,22 @@ function startScanner() {
         },
         onQrCodeSuccess,
         onQrCodeError
-    ).catch(err => {
+    ).then(() => {
+        // Detectar si el dispositivo y cámara soportan Linterna / Flash
+        setTimeout(() => {
+            const videoElem = document.querySelector("#qr-reader video");
+            if (videoElem && videoElem.srcObject) {
+                const tracks = videoElem.srcObject.getVideoTracks();
+                if (tracks && tracks.length > 0) {
+                    activeVideoTrack = tracks[0];
+                    const caps = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
+                    if (caps.torch && torchBtn) {
+                        torchBtn.classList.remove("hidden");
+                    }
+                }
+            }
+        }, 800);
+    }).catch(err => {
         console.error(err);
         stopScanner();
         alert("No se pudo acceder a la cámara.");
@@ -967,9 +1212,16 @@ function startScanner() {
 
 function stopScanner() {
     isScannerActive = false;
-    toggleCameraBtn.innerHTML = `<i class="ti ti-camera"></i> Iniciar Escáner`;
+    toggleCameraBtn.innerHTML = `<i class="ti ti-camera"></i> ${currentLang === 'en' ? 'Start Scanner' : 'Iniciar Escáner'}`;
     toggleCameraBtn.className = "btn-secondary";
     scannerOverlay.classList.add("hidden");
+
+    if (torchBtn) {
+        torchBtn.classList.add("hidden");
+        torchBtn.classList.remove("active");
+        isTorchOn = false;
+    }
+    activeVideoTrack = null;
 
     if (html5QrScanner) {
         html5QrScanner.stop().then(() => {
@@ -997,29 +1249,17 @@ function onQrCodeSuccess(decodedText) {
     }
 
     if (!guest) {
-        displayResult('danger', 'Invitado No Encontrado', `El código QR "${qrVal}" no está registrado.`, qrVal);
+        displayResult('danger', currentLang === 'en' ? 'Guest Not Found' : 'Invitado No Encontrado', `${currentLang === 'en' ? 'The QR code' : 'El código QR'} "${qrVal}" ${currentLang === 'en' ? 'is not registered.' : 'no está registrado.'}`, qrVal);
         playSound('error');
         return;
     }
 
     const hasAttended = guest.attendance && guest.attendance.toLowerCase().trim() !== "";
-    if (hasAttended) {
-        displayResult('warning', 'Asistencia Ya Registrada', guest.name, guest.id, guest.quantity, guest.attendance);
+    if (hasAttended && !guest.attendance.includes("Parcial")) {
+        displayResult('warning', currentLang === 'en' ? 'Already Checked-In' : 'Asistencia Ya Registrada', guest.name, guest.id, guest.quantity, guest.attendance, guest.table, guest.notes, guest);
         playSound('warning');
     } else {
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const guestIndex = guestData.findIndex(g => g.id === guest.id);
-        
-        guestData[guestIndex].attendance = `Sí (${time})`;
-        guestData[guestIndex].rawRow["Asistencia"] = `Sí (${time})`;
-        
-        // Sincronizar en tiempo real a Firebase
-        syncCheckInToFirebase(guest.id, true, time, "Escáner");
-        
-        updateDashboard();
-        renderGuestTable();
-        displayResult('success', '¡Registro Exitoso!', guest.name, guest.id, guest.quantity, `Sí (${time})`);
-        playSound('success');
+        processCheckIn(guest, guest.quantity, "Escáner");
     }
 }
 
@@ -1031,7 +1271,7 @@ function resetResultDisplay() {
     resultDetails.classList.add("hidden");
 }
 
-function displayResult(type, title, name, id = "-", qty = "-", time = "-") {
+function displayResult(type, title, name, id = "-", qty = "-", time = "-", table = "-", notes = "", guestObj = null) {
     resultPlaceholder.classList.add("hidden");
     resultDetails.classList.remove("hidden");
     resultCard.className = "card result-card " + type;
@@ -1042,8 +1282,42 @@ function displayResult(type, title, name, id = "-", qty = "-", time = "-") {
     resultQty.textContent = qty;
     resultTime.textContent = time;
 
+    if (resultTable) resultTable.textContent = table || "-";
+    
+    if (resultNotesRow) {
+        if (notes && notes.trim() !== "") {
+            resultNotes.textContent = notes;
+            resultNotesRow.classList.remove("hidden");
+        } else {
+            resultNotesRow.classList.add("hidden");
+        }
+    }
+
+    if (resultVipBanner) {
+        if (type === 'vip' || (guestObj && guestObj.isVip)) {
+            resultVipBanner.classList.remove("hidden");
+        } else {
+            resultVipBanner.classList.add("hidden");
+        }
+    }
+
+    if (partialCheckinBox && partialButtonsGroup) {
+        if (guestObj && guestObj.quantity > 1 && (!guestObj.attendance || guestObj.attendance.includes("Parcial"))) {
+            partialCheckinBox.classList.remove("hidden");
+            let btnsHtml = "";
+            for (let i = 1; i < guestObj.quantity; i++) {
+                btnsHtml += `<button class="partial-btn" onclick="processCheckInById('${guestObj.id}', ${i})">${i} pase${i > 1 ? 's' : ''}</button>`;
+            }
+            partialButtonsGroup.innerHTML = btnsHtml;
+        } else {
+            partialCheckinBox.classList.add("hidden");
+        }
+    }
+
     resultStatusIconWrapper.className = "result-status-icon-wrapper";
-    if (type === 'success') {
+    if (type === 'vip') {
+        resultIcon.className = "ti ti-crown";
+    } else if (type === 'success') {
         resultIcon.className = "ti ti-circle-check";
     } else if (type === 'warning') {
         resultIcon.className = "ti ti-alert-triangle";
@@ -1308,3 +1582,314 @@ function processExcelMerging() {
         alert("Ocurrió un error inesperado al fusionar las bases de datos.");
     }
 }
+
+// ============================================================================
+// NUEVAS MEJORAS DE ALTO IMPACTO (CONTROLES, IDIOMA, VOZ, WHATSAPP Y REPORTES)
+// ============================================================================
+
+function setupNewFeatureControls() {
+    // 1. Inicializar Tema (☀️ Modo Día / 🌙 Modo Noche)
+    if (isLightTheme) {
+        document.body.classList.add("light-theme");
+        if (themeIcon) themeIcon.className = "ti ti-moon";
+        if (themeBtnText) themeBtnText.textContent = "Modo Noche";
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener("click", () => {
+            isLightTheme = !isLightTheme;
+            if (isLightTheme) {
+                document.body.classList.add("light-theme");
+                if (themeIcon) themeIcon.className = "ti ti-moon";
+                if (themeBtnText) themeBtnText.textContent = currentLang === 'en' ? "Dark Mode" : "Modo Noche";
+                localStorage.setItem("pro-theme", "light");
+            } else {
+                document.body.classList.remove("light-theme");
+                if (themeIcon) themeIcon.className = "ti ti-sun";
+                if (themeBtnText) themeBtnText.textContent = currentLang === 'en' ? "Sunlight Mode" : "Modo Día";
+                localStorage.setItem("pro-theme", "dark");
+            }
+        });
+    }
+
+    // 2. Inicializar Voz de Bienvenida Concierge
+    if (voiceBtnText) {
+        voiceBtnText.textContent = isVoiceEnabled 
+            ? (currentLang === 'en' ? "Voice: ON" : "Voz: Sí") 
+            : (currentLang === 'en' ? "Voice: OFF" : "Voz: No");
+    }
+    if (voiceIcon) {
+        voiceIcon.className = isVoiceEnabled ? "ti ti-volume" : "ti ti-volume-off";
+    }
+
+    if (voiceToggleBtn) {
+        voiceToggleBtn.addEventListener("click", () => {
+            isVoiceEnabled = !isVoiceEnabled;
+            localStorage.setItem("pro-voice-enabled", isVoiceEnabled);
+            if (voiceBtnText) {
+                voiceBtnText.textContent = isVoiceEnabled 
+                    ? (currentLang === 'en' ? "Voice: ON" : "Voz: Sí") 
+                    : (currentLang === 'en' ? "Voice: OFF" : "Voz: No");
+            }
+            if (voiceIcon) {
+                voiceIcon.className = isVoiceEnabled ? "ti ti-volume" : "ti ti-volume-off";
+            }
+        });
+    }
+
+    // 3. Inicializar Selector de Idioma (ES / EN)
+    if (langBtnText) {
+        langBtnText.textContent = currentLang === 'en' ? "ES" : "EN";
+    }
+    if (langToggleBtn) {
+        langToggleBtn.addEventListener("click", () => {
+            currentLang = currentLang === 'es' ? 'en' : 'es';
+            localStorage.setItem("pro-lang", currentLang);
+            if (langBtnText) {
+                langBtnText.textContent = currentLang === 'en' ? "ES" : "EN";
+            }
+            applyLanguage();
+        });
+    }
+    applyLanguage();
+
+    // 4. Linterna / Flash
+    if (torchBtn) {
+        torchBtn.addEventListener("click", () => {
+            if (!activeVideoTrack) return;
+            try {
+                isTorchOn = !isTorchOn;
+                activeVideoTrack.applyConstraints({
+                    advanced: [{ torch: isTorchOn }]
+                }).then(() => {
+                    if (isTorchOn) {
+                        torchBtn.classList.add("active");
+                        torchBtn.innerHTML = '<i class="ti ti-bolt-off"></i>';
+                    } else {
+                        torchBtn.classList.remove("active");
+                        torchBtn.innerHTML = '<i class="ti ti-bolt"></i>';
+                    }
+                }).catch(err => {
+                    console.warn("Torch constraint error:", err);
+                });
+            } catch(e) {
+                console.warn("Torch failed:", e);
+            }
+        });
+    }
+
+    // 5. Modal Reporte Ejecutivo
+    if (openReportBtn) {
+        openReportBtn.addEventListener("click", openExecutiveReport);
+    }
+    if (closeRepModalBtn && executiveReportModal) {
+        closeRepModalBtn.addEventListener("click", () => executiveReportModal.classList.add("hidden"));
+    }
+    if (printRepBtn) {
+        printRepBtn.addEventListener("click", () => window.print());
+    }
+
+    // 6. Modal QR Individual
+    if (closeIndivQrModalBtn && individualQrModal) {
+        closeIndivQrModalBtn.addEventListener("click", () => individualQrModal.classList.add("hidden"));
+    }
+}
+
+function applyLanguage() {
+    const langData = i18n[currentLang] || i18n.es;
+    
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (langData[key]) {
+            el.textContent = langData[key];
+        }
+    });
+
+    if (searchInput) {
+        searchInput.placeholder = currentLang === 'en' 
+            ? "Search by name, ID, table..." 
+            : "Buscar por nombre, ID, mesa...";
+    }
+
+    if (themeBtnText) {
+        themeBtnText.textContent = isLightTheme 
+            ? (currentLang === 'en' ? "Dark Mode" : "Modo Noche") 
+            : (currentLang === 'en' ? "Sunlight Mode" : "Modo Día");
+    }
+
+    if (voiceBtnText) {
+        voiceBtnText.textContent = isVoiceEnabled 
+            ? (currentLang === 'en' ? "Voice: ON" : "Voz: Sí") 
+            : (currentLang === 'en' ? "Voice: OFF" : "Voz: No");
+    }
+
+    renderGuestTable();
+}
+
+function speakWelcome(guest, qty) {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    try {
+        window.speechSynthesis.cancel();
+        
+        let text = "";
+        const tableText = (guest.table && guest.table !== "-") 
+            ? (currentLang === 'en' ? `, Table ${guest.table}` : `, Mesa ${guest.table}`) 
+            : "";
+        const passesText = (qty && qty > 1) 
+            ? (currentLang === 'en' ? `, ${qty} guests` : `, ${qty} personas`) 
+            : "";
+
+        if (currentLang === 'en') {
+            if (guest.isVip) {
+                text = `Welcome ${guest.name}, VIP guest!${tableText}`;
+            } else {
+                text = `Welcome ${guest.name}!${tableText}${passesText}`;
+            }
+        } else {
+            if (guest.isVip) {
+                text = `¡Bienvenido ${guest.name}, invitado de honor!${tableText}`;
+            } else {
+                text = `¡Bienvenido ${guest.name}!${tableText}${passesText}`;
+            }
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.lang = currentLang === 'en' ? 'en-US' : 'es-MX';
+        window.speechSynthesis.speak(utterance);
+    } catch(e) {
+        console.warn("TTS error:", e);
+    }
+}
+
+function sharePassWhatsApp(guestId) {
+    const guest = guestData.find(g => g.id === guestId);
+    if (!guest) return;
+    
+    const eventName = appTitleDisplay ? appTitleDisplay.textContent : "AccesoQR PRO";
+    const tableInfo = (guest.table && guest.table !== "-") ? `\n📍 Mesa: ${guest.table}` : "";
+    const passesInfo = `\n🎟️ Pases autorizados: ${guest.quantity}`;
+    const codeInfo = `\n🔑 Código de acceso: ${guest.qrValue || guest.id}`;
+    
+    let text = `¡Hola *${guest.name}*! Te compartimos tu pase de acceso personal para *${eventName}*:${passesInfo}${tableInfo}${codeInfo}\n\nPresenta este mensaje o tu código QR en la puerta de entrada para registrar tu asistencia. ¡Te esperamos!`;
+    
+    let cleanPhone = (guest.phone || "").replace(/\D/g, "");
+    let waUrl = "";
+    if (cleanPhone.length >= 10) {
+        if (cleanPhone.length === 10) cleanPhone = "52" + cleanPhone; // México por defecto
+        waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    } else {
+        waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    }
+    
+    window.open(waUrl, "_blank");
+}
+
+function openIndividualQrModal(guestId) {
+    const guest = guestData.find(g => g.id === guestId);
+    if (!guest) return;
+
+    indivGuestName.textContent = guest.name;
+    indivGuestId.textContent = guest.id;
+    indivGuestQty.textContent = guest.quantity;
+    indivGuestTable.textContent = guest.table || "-";
+
+    try {
+        const qr = qrcode(0, 'M');
+        qr.addData(guest.qrValue || guest.id);
+        qr.make();
+        indivQrCodeBox.innerHTML = qr.createImgTag(5, 8);
+    } catch(e) {
+        indivQrCodeBox.innerHTML = `<span style="color:red">Error generando QR</span>`;
+    }
+
+    indivWaBtn.onclick = () => sharePassWhatsApp(guest.id);
+    indivDownloadBtn.onclick = () => downloadIndividualQrImage(guest);
+
+    individualQrModal.classList.remove("hidden");
+}
+
+function downloadIndividualQrImage(guest) {
+    const img = indivQrCodeBox.querySelector("img");
+    if (!img) return;
+    const a = document.createElement("a");
+    a.href = img.src;
+    a.download = `Pase_QR_${guest.id}_${guest.name.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function updateFlowRate() {
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    const recentCheckins = checkinTimestamps.filter(c => c.time >= fiveMinutesAgo);
+    const totalRecentGuests = recentCheckins.reduce((acc, curr) => acc + (curr.qty || 1), 0);
+    const ratePerMin = Math.round((totalRecentGuests / 5) * 10) / 10;
+    
+    if (flowRateText) {
+        flowRateText.textContent = `Flujo: ${ratePerMin} pers/min`;
+    }
+}
+
+function openExecutiveReport() {
+    const total = guestData.length;
+    const attended = guestData.filter(g => g.attendance && g.attendance.toLowerCase().trim() !== "").length;
+    const pending = total - attended;
+    const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
+
+    repEventTitle.textContent = "Evento: " + (appTitleDisplay ? appTitleDisplay.textContent : "AccesoQR PRO");
+    repTotalGuests.textContent = total;
+    repTotalAttended.textContent = attended;
+    repTotalPending.textContent = pending;
+    repPercentage.textContent = `${percentage}%`;
+
+    // Calcular hora pico
+    const hourCounts = {};
+    checkinTimestamps.forEach(item => {
+        if (item.hour) {
+            hourCounts[item.hour] = (hourCounts[item.hour] || 0) + (item.qty || 1);
+        }
+    });
+
+    let peakHour = "--:--";
+    let peakCount = 0;
+    Object.keys(hourCounts).forEach(h => {
+        if (hourCounts[h] > peakCount) {
+            peakCount = hourCounts[h];
+            peakHour = h;
+        }
+    });
+
+    repPeakHour.textContent = peakHour !== "--:--" ? peakHour : (attended > 0 ? "Registro continuo" : "--:--");
+    repPeakRate.textContent = `${peakCount} asistentes`;
+
+    // Desglose por mesas
+    const tableStats = {};
+    guestData.forEach(g => {
+        const t = (g.table && g.table !== "-") ? g.table : "Sin Mesa";
+        if (!tableStats[t]) {
+            tableStats[t] = { total: 0, attended: 0 };
+        }
+        tableStats[t].total += g.quantity;
+        if (g.attendance && g.attendance.toLowerCase().trim() !== "") {
+            tableStats[t].attended += g.quantity;
+        }
+    });
+
+    const tablesHtml = Object.keys(tableStats).map(t => {
+        const item = tableStats[t];
+        const pct = item.total > 0 ? Math.round((item.attended / item.total) * 100) : 0;
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                <span><strong>${t}</strong></span>
+                <span>${item.attended} / ${item.total} pases (${pct}%)</span>
+            </div>
+        `;
+    }).join("");
+
+    repTablesBreakdown.innerHTML = tablesHtml || `<span style="color:var(--text-secondary)">No hay datos de mesas cargados.</span>`;
+
+    executiveReportModal.classList.remove("hidden");
+}
+
