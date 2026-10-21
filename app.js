@@ -19,7 +19,7 @@
 // ----------------------------------------------------------------------------
 
 // URL del Web App de Google Apps Script para validar licencias en la nube
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7LhIVbvb1H9fc0YgeuWjZWGzb3rBikUa52pE8zu7K8JKA1BQgDSFj9c5kZ3XBiijFog/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbze_E6zOwQyUUaj-gdc2WcOV0NeDBassrXUQFuA1ERAl8mIlolRi1mlybKZ9i67x1lt-w/exec";
 
 // Configuración de la base de datos en tiempo real de Firebase (Realtime Database)
 const firebaseConfig = {
@@ -52,16 +52,17 @@ if (isFirebaseActive) {
 /**
  * Enviar un registro de asistencia en tiempo real a Firebase Realtime Database
  */
-function syncCheckInToFirebase(guestId, attended, time, door = "Local") {
+function syncCheckInToFirebase(guestId, attended, time, door = "Puerta 1", attendanceStr = "") {
     if (!isFirebaseActive) return;
     const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
     const cleanKey = sanitizeFirebaseKey(licenseKey);
-    const cleanEvent = sanitizeFirebaseKey(activeSheetName);
+    const cleanEvent = sanitizeFirebaseKey(activeSheetName || "Evento");
     const cleanGuestId = sanitizeFirebaseKey(guestId);
     
     firebase.database().ref(`licencias/${cleanKey}/eventos/${cleanEvent}/asistencias/${cleanGuestId}`).set({
         attended: attended,
         attendTime: time,
+        attendanceStr: attendanceStr || (attended ? (time ? `Sí (${time})` : "Sí") : ""),
         door: door
     });
 }
@@ -162,6 +163,8 @@ let isLightTheme = localStorage.getItem("pro-theme") === "light";
 let isTorchOn = false;
 let activeVideoTrack = null;
 let checkinTimestamps = []; // { time, qty, hour }
+let lastScannedCode = "";
+let lastScannedTime = 0;
 
 const themeToggleBtn = document.getElementById("theme-toggle-btn");
 const themeIcon = document.getElementById("theme-icon");
@@ -245,7 +248,8 @@ const i18n = {
         thQr: "Código QR",
         thAttendance: "Asistencia",
         thActions: "Acciones",
-        emptyTable: "Carga un archivo Excel para ver la lista de invitados."
+        emptyTable: "Carga un archivo Excel para ver la lista de invitados.",
+        walkinBtn: "+ En Puerta"
     },
     en: {
         scannerTab: "Scanner",
@@ -280,7 +284,8 @@ const i18n = {
         thQr: "QR Code",
         thAttendance: "Attendance",
         thActions: "Actions",
-        emptyTable: "Load an Excel file to view the guest list."
+        emptyTable: "Load an Excel file to view the guest list.",
+        walkinBtn: "+ Walk-In"
     }
 };
 
@@ -294,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupSearchAndFilters();
     setupCameraOptions();
     setupBrandingHandlers();
+    setupMergeHandlers();
     setupGuideModal();
     
     downloadExcelBtn.addEventListener("click", exportUpdatedExcel);
@@ -305,6 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     setupNewFeatureControls();
+    restoreLocalSessionIfExists();
 });
 
 function setupGuideModal() {
@@ -520,14 +527,14 @@ function handleActivationSubmit() {
     activateAppBtn.textContent = "Cifrando y Validando...";
     activationErrorMsg.classList.add("hidden");
 
-    // Construcción de Payload Cifrado en Base64
+    // Construcción de Payload Cifrado en Base64 (UTF-8 seguro)
     const secureObj = {
         key: key,
         device: deviceId,
         ts: Date.now(),
         nonce: Math.random().toString(36).substring(2, 10)
     };
-    const encodedPayload = btoa(encodeURIComponent(JSON.stringify(secureObj)));
+    const encodedPayload = btoa(unescape(encodeURIComponent(JSON.stringify(secureObj))));
 
     const fetchUrl = `${GOOGLE_SCRIPT_URL}?payload=${encodeURIComponent(encodedPayload)}&key=${encodeURIComponent(key)}&device=${encodeURIComponent(deviceId)}`;
 
@@ -841,79 +848,20 @@ function handleExcelFile(file) {
                 return {
                     id: String(row["ID"] || row["id"] || index + 1).trim(),
                     name: rawName,
-                    quantity: parseInt(row["Cantidad"] || row["cantidad"] || row["Pases"] || row["pases"] || 1),
+                    quantity: parseInt(row["Cantidad"] || row["cantidad"] || row["Pases"] || row["pases"] || 1) || 1,
                     table: tableVal,
                     isVip: isVip,
                     phone: phoneVal,
                     notes: notesVal,
                     qrValue: String(row["QR"] || row["qr"] || row["Codigo"] || "").trim(),
                     attendance: String(row["Asistencia"] || row["asistencia"] || "").trim(),
+                    door: String(row["Puerta"] || row["puerta"] || "").trim(),
                     rawRow: row
                 };
             });
 
-            fileNameDisplay.textContent = file.name;
-            dropZone.classList.add("hidden");
-            fileInfo.classList.remove("hidden");
-            fileStatusIndicator.classList.add("loaded");
-            fileStatusIndicator.innerHTML = `<span class="dot"></span> Archivo cargado: ${file.name}`;
-            
-            searchInput.removeAttribute("disabled");
-            toggleCameraBtn.removeAttribute("disabled");
-            downloadExcelBtn.removeAttribute("disabled");
-            
-            // Enable or Disable QR Generator PRO based on Plan
-            const allowQrGen = secureGetKey("pro-license-allow-qr-gen") !== "false";
-            if (allowQrGen) {
-                generateQrsBtn.removeAttribute("disabled");
-                qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs.`;
-            } else {
-                generateQrsBtn.setAttribute("disabled", "true");
-                qrGenMsg.innerHTML = `<i class="ti ti-lock text-warning"></i> Tu plan contratado es <strong>Solo Escáner</strong>. Para generar códigos QR en masa, actualiza a la Licencia Completa o PRO.`;
-            }
-            
-            // Sincronización en tiempo real Firebase
-            if (isFirebaseActive && activeSheetName) {
-                const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
-                const cleanKey = sanitizeFirebaseKey(licenseKey);
-                const cleanEvent = sanitizeFirebaseKey(activeSheetName);
-                
-                if (dbRef) {
-                    dbRef.off();
-                }
-                
-                dbRef = firebase.database().ref(`licencias/${cleanKey}/eventos/${cleanEvent}/asistencias`);
-                dbRef.on('value', (snapshot) => {
-                    const val = snapshot.val();
-                    if (val) {
-                        let updated = false;
-                        guestData.forEach(guest => {
-                            const cleanGuestId = sanitizeFirebaseKey(guest.id);
-                            if (val[cleanGuestId] && val[cleanGuestId].attended) {
-                                const expectedAttendance = val[cleanGuestId].attendTime ? `Sí (${val[cleanGuestId].attendTime})` : "Sí";
-                                if (guest.attendance !== expectedAttendance) {
-                                    guest.attendance = expectedAttendance;
-                                    guest.rawRow["Asistencia"] = expectedAttendance;
-                                    updated = true;
-                                }
-                            } else {
-                                if (guest.attendance) {
-                                    guest.attendance = "";
-                                    guest.rawRow["Asistencia"] = "";
-                                    updated = true;
-                                }
-                            }
-                        });
-                        if (updated) {
-                            updateDashboard();
-                            renderGuestTable();
-                        }
-                    }
-                });
-            }
-
-            updateDashboard();
-            renderGuestTable();
+            activateLoadedGuestSession(file.name);
+            saveLocalSession(file.name);
             playSound('success');
             
         } catch (err) {
@@ -922,6 +870,121 @@ function handleExcelFile(file) {
         }
     };
     reader.readAsArrayBuffer(file);
+}
+
+/**
+ * Activa la interfaz, sincronización Firebase y controles tras cargar o restaurar una sesión
+ */
+function activateLoadedGuestSession(fileName = "Sesión Restaurada.xlsx") {
+    fileNameDisplay.textContent = fileName;
+    dropZone.classList.add("hidden");
+    fileInfo.classList.remove("hidden");
+    fileStatusIndicator.classList.add("loaded");
+    fileStatusIndicator.innerHTML = `<span class="dot"></span> Archivo cargado: ${fileName}`;
+    
+    searchInput.removeAttribute("disabled");
+    toggleCameraBtn.removeAttribute("disabled");
+    downloadExcelBtn.removeAttribute("disabled");
+    const openWalkinBtn = document.getElementById("open-walkin-modal-btn");
+    if (openWalkinBtn) openWalkinBtn.removeAttribute("disabled");
+    
+    // Enable or Disable QR Generator PRO based on Plan
+    const allowQrGen = secureGetKey("pro-license-allow-qr-gen") !== "false";
+    if (allowQrGen) {
+        generateQrsBtn.removeAttribute("disabled");
+        qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> Lista cargada con <strong>${guestData.length}</strong> invitados listos para generar QRs o Pases VIP.`;
+    } else {
+        generateQrsBtn.setAttribute("disabled", "true");
+        qrGenMsg.innerHTML = `<i class="ti ti-lock text-warning"></i> Tu plan contratado es <strong>Solo Escáner</strong>. Para generar códigos QR en masa, actualiza a la Licencia Completa o PRO.`;
+    }
+    
+    // Sincronización en tiempo real Firebase
+    if (isFirebaseActive && activeSheetName) {
+        const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
+        const cleanKey = sanitizeFirebaseKey(licenseKey);
+        const cleanEvent = sanitizeFirebaseKey(activeSheetName);
+        
+        if (dbRef) {
+            dbRef.off();
+        }
+        
+        dbRef = firebase.database().ref(`licencias/${cleanKey}/eventos/${cleanEvent}/asistencias`);
+        dbRef.on('value', (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                let updated = false;
+                guestData.forEach(guest => {
+                    const cleanGuestId = sanitizeFirebaseKey(guest.id);
+                    if (val[cleanGuestId] && val[cleanGuestId].attended) {
+                        const expectedAttendance = val[cleanGuestId].attendanceStr 
+                            || (val[cleanGuestId].attendTime ? `Sí (${val[cleanGuestId].attendTime})` : "Sí");
+                        if (guest.attendance !== expectedAttendance) {
+                            guest.attendance = expectedAttendance;
+                            guest.rawRow["Asistencia"] = expectedAttendance;
+                            if (val[cleanGuestId].door) {
+                                guest.door = val[cleanGuestId].door;
+                                guest.rawRow["Puerta"] = val[cleanGuestId].door;
+                            }
+                            updated = true;
+                        }
+                    } else if (val[cleanGuestId] && val[cleanGuestId].attended === false) {
+                        if (guest.attendance) {
+                            guest.attendance = "";
+                            guest.rawRow["Asistencia"] = "";
+                            updated = true;
+                        }
+                    }
+                });
+                if (updated) {
+                    saveLocalSession();
+                    updateDashboard();
+                    renderGuestTable();
+                }
+            }
+        });
+    }
+
+    updateDashboard();
+    renderGuestTable();
+}
+
+/**
+ * Respaldo automático en localStorage contra recargas accidentales (F5) en eventos Offline
+ */
+function saveLocalSession(fileName) {
+    try {
+        if (!guestData || guestData.length === 0) return;
+        const currentFileName = fileName || (fileNameDisplay ? fileNameDisplay.textContent : "Invitados.xlsx");
+        const sessionPayload = {
+            fileName: currentFileName,
+            activeSheetName: activeSheetName || "Invitados",
+            originalColumnsOrder: originalColumnsOrder,
+            guestData: guestData,
+            checkinTimestamps: checkinTimestamps,
+            savedAt: Date.now()
+        };
+        localStorage.setItem("pro-offline-session-backup", JSON.stringify(sessionPayload));
+    } catch (e) {
+        console.warn("No se pudo guardar el respaldo local:", e);
+    }
+}
+
+function restoreLocalSessionIfExists() {
+    try {
+        const raw = localStorage.getItem("pro-offline-session-backup");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.guestData) && parsed.guestData.length > 0) {
+            guestData = parsed.guestData;
+            activeSheetName = parsed.activeSheetName || "Invitados";
+            originalColumnsOrder = parsed.originalColumnsOrder || ["ID", "Invitado", "Cantidad", "Mesa", "VIP", "Teléfono", "Notas", "QR", "Asistencia"];
+            checkinTimestamps = Array.isArray(parsed.checkinTimestamps) ? parsed.checkinTimestamps : [];
+            activateLoadedGuestSession(parsed.fileName || "Sesión Recuperada.xlsx");
+            updateFlowRate();
+        }
+    } catch (e) {
+        console.warn("Error al restaurar sesión local:", e);
+    }
 }
 
 function resetAppState() {
@@ -934,6 +997,8 @@ function resetAppState() {
     originalWorkbook = null;
     activeSheetName = "";
     originalColumnsOrder = [];
+    checkinTimestamps = [];
+    localStorage.removeItem("pro-offline-session-backup");
     
     dropZone.classList.remove("hidden");
     fileInfo.classList.add("hidden");
@@ -944,6 +1009,8 @@ function resetAppState() {
     searchInput.value = "";
     toggleCameraBtn.setAttribute("disabled", "true");
     downloadExcelBtn.setAttribute("disabled", "true");
+    const openWalkinBtn = document.getElementById("open-walkin-modal-btn");
+    if (openWalkinBtn) openWalkinBtn.setAttribute("disabled", "true");
     
     // Disable QR Gen PRO
     generateQrsBtn.setAttribute("disabled", "true");
@@ -969,15 +1036,39 @@ function resetAppState() {
     resetResultDisplay();
 }
 
+/**
+ * Auxiliar para obtener cuántos pases reales han ingresado de un invitado (soporta ingresos parciales)
+ */
+function getAttendedPassesCount(guest) {
+    if (!guest.attendance || guest.attendance.trim() === "") return 0;
+    const partialMatch = guest.attendance.match(/Parcial\s*\((\d+)\/(\d+)/i);
+    if (partialMatch) {
+        return parseInt(partialMatch[1], 10) || 1;
+    }
+    return guest.quantity || 1;
+}
+
 function updateDashboard() {
     const total = guestData.length;
     const attended = guestData.filter(g => g.attendance && g.attendance.toLowerCase().trim() !== "").length;
     const pending = total - attended;
     const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
     
+    // Cálculo de personas / pases reales (sillas/platillos)
+    const totalPasses = guestData.reduce((sum, g) => sum + (g.quantity || 1), 0);
+    const attendedPasses = guestData.reduce((sum, g) => sum + getAttendedPassesCount(g), 0);
+    const pendingPasses = Math.max(0, totalPasses - attendedPasses);
+
     statTotal.textContent = total;
     statAttended.textContent = attended;
     statPending.textContent = pending;
+
+    const statTotalPassesEl = document.getElementById("stat-total-passes");
+    const statAttendedPassesEl = document.getElementById("stat-attended-passes");
+    const statPendingPassesEl = document.getElementById("stat-pending-passes");
+    if (statTotalPassesEl) statTotalPassesEl.textContent = `${totalPasses} ${currentLang === 'en' ? 'passes' : 'pases'}`;
+    if (statAttendedPassesEl) statAttendedPassesEl.textContent = `${attendedPasses} ${currentLang === 'en' ? 'people' : 'personas'}`;
+    if (statPendingPassesEl) statPendingPassesEl.textContent = `${pendingPasses} ${currentLang === 'en' ? 'people' : 'personas'}`;
     
     progressFill.style.width = `${percentage}%`;
     progressPercentage.textContent = `${percentage}%`;
@@ -1049,6 +1140,11 @@ function renderGuestTable() {
     }).join('');
 }
 
+function getCurrentDoorName() {
+    const doorInput = document.getElementById("door-name-input");
+    return (doorInput && doorInput.value.trim()) ? doorInput.value.trim() : "Puerta 1";
+}
+
 function toggleAttendance(id, revert = false) {
     const guest = guestData.find(g => g.id === id);
     if (!guest) return;
@@ -1056,8 +1152,10 @@ function toggleAttendance(id, revert = false) {
     if (revert) {
         const guestIndex = guestData.findIndex(g => g.id === id);
         guestData[guestIndex].attendance = "";
+        guestData[guestIndex].door = "";
         guestData[guestIndex].rawRow["Asistencia"] = "";
-        syncCheckInToFirebase(id, false, "", "Revertido Manual");
+        syncCheckInToFirebase(id, false, "", getCurrentDoorName(), "");
+        saveLocalSession();
         updateDashboard();
         renderGuestTable();
         resetResultDisplay();
@@ -1079,6 +1177,7 @@ function processCheckIn(guest, qtyToCheckIn = null, source = "Escáner") {
 
     const isFullCheckIn = (qtyToCheckIn === null || qtyToCheckIn >= guest.quantity);
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const doorName = getCurrentDoorName();
 
     let attendanceStr = "";
     if (isFullCheckIn) {
@@ -1088,7 +1187,9 @@ function processCheckIn(guest, qtyToCheckIn = null, source = "Escáner") {
     }
 
     guestData[guestIndex].attendance = attendanceStr;
+    guestData[guestIndex].door = doorName;
     guestData[guestIndex].rawRow["Asistencia"] = attendanceStr;
+    guestData[guestIndex].rawRow["Puerta"] = doorName;
 
     // Registrar métrica de tiempo para velocidad
     checkinTimestamps.push({
@@ -1098,8 +1199,9 @@ function processCheckIn(guest, qtyToCheckIn = null, source = "Escáner") {
     });
     updateFlowRate();
 
-    // Sincronizar en tiempo real a Firebase
-    syncCheckInToFirebase(guest.id, true, time, `${source} ${!isFullCheckIn ? '(' + qtyToCheckIn + '/' + guest.quantity + ')' : ''}`);
+    // Sincronizar en tiempo real a Firebase y guardar respaldo local
+    syncCheckInToFirebase(guest.id, true, time, `${doorName} (${source})`, attendanceStr);
+    saveLocalSession();
 
     updateDashboard();
     renderGuestTable();
@@ -1232,6 +1334,15 @@ function stopScanner() {
 
 function onQrCodeSuccess(decodedText) {
     let qrVal = decodedText.trim();
+    const now = Date.now();
+
+    // Cooldown anti-rebote (2.8 segundos para el mismo código QR)
+    // Evita que la cámara a 10fps dispare "Asistencia Ya Registrada" 100ms después de un escaneo exitoso
+    if (qrVal === lastScannedCode && (now - lastScannedTime) < 2800) {
+        return;
+    }
+    lastScannedCode = qrVal;
+    lastScannedTime = now;
     
     let guest = guestData.find(g => 
         (g.qrValue && g.qrValue.toLowerCase() === qrVal.toLowerCase()) || 
@@ -1329,26 +1440,38 @@ function displayResult(type, title, name, id = "-", qty = "-", time = "-", table
 function exportUpdatedExcel() {
     if (guestData.length === 0) return;
 
+    const exportColumns = [...originalColumnsOrder];
+    if (!exportColumns.some(k => k.toLowerCase() === "asistencia")) {
+        exportColumns.push("Asistencia");
+    }
+    if (!exportColumns.some(k => k.toLowerCase() === "puerta")) {
+        exportColumns.push("Puerta");
+    }
+
     const outputRows = guestData.map(guest => {
         const row = { ...guest.rawRow };
         const idKey = Object.keys(row).find(k => k.toLowerCase() === "id") || "ID";
         const nameKey = Object.keys(row).find(k => k.toLowerCase() === "invitado") || "Invitado";
         const qtyKey = Object.keys(row).find(k => k.toLowerCase() === "cantidad") || "Cantidad";
+        const tableKey = Object.keys(row).find(k => k.toLowerCase() === "mesa") || "Mesa";
         const qrKey = Object.keys(row).find(k => k.toLowerCase() === "qr") || "QR";
         const attendanceKey = Object.keys(row).find(k => k.toLowerCase() === "asistencia") || "Asistencia";
+        const doorKey = Object.keys(row).find(k => k.toLowerCase() === "puerta") || "Puerta";
 
         row[idKey] = guest.id;
         row[nameKey] = guest.name;
         row[qtyKey] = guest.quantity;
-        row[qrKey] = guest.qrValue;
+        if (guest.table && guest.table !== "-") row[tableKey] = guest.table;
+        row[qrKey] = guest.qrValue || guest.id;
         row[attendanceKey] = guest.attendance;
+        row[doorKey] = guest.door || "";
         return row;
     });
 
     try {
-        const newWorksheet = XLSX.utils.json_to_sheet(outputRows, { header: originalColumnsOrder });
+        const newWorksheet = XLSX.utils.json_to_sheet(outputRows, { header: exportColumns });
         const newWorkbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, activeSheetName);
+        XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, activeSheetName || "Invitados");
         XLSX.writeFile(newWorkbook, "Asistencia_PRO.xlsx");
         playSound('success');
     } catch(err) {
@@ -1357,7 +1480,7 @@ function exportUpdatedExcel() {
     }
 }
 
-// PRO FEATURE: QR Generator & Bulk ZIP Downloader
+// PRO FEATURE: QR Generator & Bulk ZIP Downloader (Soporta Pases VIP con Diseño o QRs simples)
 function generateBulkQrsZip() {
     if (guestData.length === 0) return;
 
@@ -1365,9 +1488,15 @@ function generateBulkQrsZip() {
     qrProgressContainer.classList.remove("hidden");
     qrProgressLbl.classList.remove("hidden");
 
+    const zipModeSelect = document.getElementById("qr-zip-mode-select");
+    const zipMode = zipModeSelect ? zipModeSelect.value : "vip-card";
+
     const zip = new JSZip();
     let currentIdx = 0;
     const totalGuests = guestData.length;
+    const offscreenCanvas = document.createElement("canvas");
+    offscreenCanvas.width = 600;
+    offscreenCanvas.height = 820;
 
     // Use intervals to prevent thread blocking so browser doesn't freeze
     const interval = setInterval(() => {
@@ -1375,17 +1504,16 @@ function generateBulkQrsZip() {
             clearInterval(interval);
             
             // Finalize and download ZIP
-            qrGenMsg.textContent = "Empaquetando archivos QRs en un ZIP...";
+            qrGenMsg.textContent = "Empaquetando boletos en archivo ZIP...";
             zip.generateAsync({ type: "blob" }).then(function(content) {
-                // Custom trigger download anchor to support offline environment
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(content);
-                link.download = "boletos_qr_evento.zip";
+                link.download = zipMode === "vip-card" ? "pases_vip_evento.zip" : "boletos_qr_evento.zip";
                 link.click();
                 
                 // Reset UI
                 generateQrsBtn.removeAttribute("disabled");
-                qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> ¡Descarga completa! Se guardó <strong>${totalGuests}</strong> códigos QR en un ZIP.`;
+                qrGenMsg.innerHTML = `<i class="ti ti-circle-check text-success"></i> ¡Descarga completa! Se generaron <strong>${totalGuests}</strong> ${zipMode === "vip-card" ? "Pases VIP Digitales" : "códigos QR"} en el archivo ZIP.`;
                 qrProgressContainer.classList.add("hidden");
                 qrProgressLbl.classList.add("hidden");
                 playSound('success');
@@ -1397,26 +1525,28 @@ function generateBulkQrsZip() {
             return;
         }
 
-        // Process guest QR code
+        // Process guest QR or VIP Card
         const guest = guestData[currentIdx];
         const qrContent = guest.qrValue || guest.id;
         
         try {
-            // Generate QR code using qrcode-generator library
-            const typeNumber = 0; // Auto detect size
-            const errorCorrectionLevel = 'H'; // High correction
-            const qr = qrcode(typeNumber, errorCorrectionLevel);
-            qr.addData(qrContent);
-            qr.make();
-            
-            // Retrieve base64 png payload from the library
-            // Cell size = 8, margin = 2
-            const imgDataUri = qr.createDataURL(8, 2);
-            const base64Data = imgDataUri.split(',')[1];
-            
-            // Clean guest name for filename
+            let base64Data = "";
             const cleanName = guest.name.replace(/[^a-z0-9]/gi, '_');
-            const filename = `QR_${guest.id}_${cleanName}.png`;
+            let filename = "";
+
+            if (zipMode === "vip-card") {
+                renderVipPassToCanvas(offscreenCanvas, guest);
+                const dataUrl = offscreenCanvas.toDataURL("image/png");
+                base64Data = dataUrl.split(',')[1];
+                filename = `Pase_VIP_${guest.id}_${cleanName}.png`;
+            } else {
+                const qr = qrcode(0, 'H');
+                qr.addData(qrContent);
+                qr.make();
+                const imgDataUri = qr.createDataURL(8, 2);
+                base64Data = imgDataUri.split(',')[1];
+                filename = `QR_${guest.id}_${cleanName}.png`;
+            }
             
             zip.file(filename, base64Data, { base64: true });
         } catch(e) {
@@ -1429,7 +1559,7 @@ function generateBulkQrsZip() {
         const progressPercent = Math.round((currentIdx / totalGuests) * 100);
         qrProgressFill.style.width = `${progressPercent}%`;
         qrProgressLbl.textContent = `Generando: ${currentIdx} / ${totalGuests}`;
-    }, 20); // Small delay to allow UI to render progress
+    }, 25);
 }
 
 // PRO FEATURE: Multi-door Excel Merging
@@ -1693,6 +1823,87 @@ function setupNewFeatureControls() {
     if (closeIndivQrModalBtn && individualQrModal) {
         closeIndivQrModalBtn.addEventListener("click", () => individualQrModal.classList.add("hidden"));
     }
+
+    // 7. Identificador de Puerta persistente
+    const doorInput = document.getElementById("door-name-input");
+    if (doorInput) {
+        const savedDoor = localStorage.getItem("pro-door-name");
+        if (savedDoor) doorInput.value = savedDoor;
+        doorInput.addEventListener("input", () => {
+            localStorage.setItem("pro-door-name", doorInput.value.trim() || "Puerta 1");
+        });
+    }
+
+    // 8. Modal de Registro Rápido en Puerta (Walk-in Check-in)
+    setupWalkInModal();
+}
+
+function setupWalkInModal() {
+    const openWalkinBtn = document.getElementById("open-walkin-modal-btn");
+    const walkinModal = document.getElementById("walkin-guest-modal");
+    const closeWalkinBtn = document.getElementById("close-walkin-modal-btn");
+    const cancelWalkinBtn = document.getElementById("cancel-walkin-btn");
+    const saveWalkinBtn = document.getElementById("save-walkin-btn");
+
+    if (!openWalkinBtn || !walkinModal) return;
+
+    const closeModal = () => walkinModal.classList.add("hidden");
+    openWalkinBtn.addEventListener("click", () => {
+        document.getElementById("walkin-name-input").value = "";
+        document.getElementById("walkin-qty-input").value = "1";
+        document.getElementById("walkin-table-input").value = "";
+        document.getElementById("walkin-vip-select").value = "No";
+        document.getElementById("walkin-notes-input").value = "";
+        walkinModal.classList.remove("hidden");
+    });
+
+    if (closeWalkinBtn) closeWalkinBtn.addEventListener("click", closeModal);
+    if (cancelWalkinBtn) cancelWalkinBtn.addEventListener("click", closeModal);
+
+    if (saveWalkinBtn) {
+        saveWalkinBtn.addEventListener("click", () => {
+            const nameVal = document.getElementById("walkin-name-input").value.trim();
+            if (!nameVal) {
+                alert("Por favor ingresa el nombre del invitado o familia.");
+                return;
+            }
+            const qtyVal = Math.max(1, parseInt(document.getElementById("walkin-qty-input").value, 10) || 1);
+            const tableVal = document.getElementById("walkin-table-input").value.trim() || "-";
+            const vipVal = document.getElementById("walkin-vip-select").value;
+            const notesVal = document.getElementById("walkin-notes-input").value.trim() || "Registrado en puerta";
+
+            const newId = "EXT-" + (guestData.length + 1);
+            const newQr = "WALKIN-" + (guestData.length + 1);
+
+            const newGuest = {
+                id: newId,
+                name: nameVal,
+                quantity: qtyVal,
+                table: tableVal,
+                isVip: vipVal === "VIP",
+                phone: "",
+                notes: notesVal,
+                qrValue: newQr,
+                attendance: "",
+                door: getCurrentDoorName(),
+                rawRow: {
+                    "ID": newId,
+                    "Invitado": nameVal,
+                    "Cantidad": qtyVal,
+                    "Mesa": tableVal,
+                    "VIP": vipVal,
+                    "Teléfono": "",
+                    "Notas": notesVal,
+                    "QR": newQr,
+                    "Asistencia": ""
+                }
+            };
+
+            guestData.unshift(newGuest);
+            closeModal();
+            processCheckIn(newGuest, qtyVal, "En Puerta");
+        });
+    }
 }
 
 function applyLanguage() {
@@ -1723,6 +1934,7 @@ function applyLanguage() {
             : (currentLang === 'en' ? "Voice: OFF" : "Voz: No");
     }
 
+    updateDashboard();
     renderGuestTable();
 }
 
@@ -1768,22 +1980,171 @@ function sharePassWhatsApp(guestId) {
     if (!guest) return;
     
     const eventName = appTitleDisplay ? appTitleDisplay.textContent : "AccesoQR PRO";
-    const tableInfo = (guest.table && guest.table !== "-") ? `\n📍 Mesa: ${guest.table}` : "";
-    const passesInfo = `\n🎟️ Pases autorizados: ${guest.quantity}`;
-    const codeInfo = `\n🔑 Código de acceso: ${guest.qrValue || guest.id}`;
+    const tableInfo = (guest.table && guest.table !== "-") ? `\n📍 Mesa: *${guest.table}*` : "";
+    const passesInfo = `\n🎟️ Pases válidos: *${guest.quantity}*`;
+    const vipInfo = guest.isVip ? `\n👑 Categoría: *INVITADO VIP*` : "";
+    const codeInfo = `\n🔑 Código de acceso: *${guest.qrValue || guest.id}*`;
     
-    let text = `¡Hola *${guest.name}*! Te compartimos tu pase de acceso personal para *${eventName}*:${passesInfo}${tableInfo}${codeInfo}\n\nPresenta este mensaje o tu código QR en la puerta de entrada para registrar tu asistencia. ¡Te esperamos!`;
+    let text = `¡Hola *${guest.name}*! ✨\nTe compartimos tu pase de acceso oficial para *${eventName}*:${vipInfo}${passesInfo}${tableInfo}${codeInfo}\n\nPresenta tu código QR en la recepción del evento para tu acceso rápido. ¡Te esperamos!`;
     
     let cleanPhone = (guest.phone || "").replace(/\D/g, "");
     let waUrl = "";
     if (cleanPhone.length >= 10) {
-        if (cleanPhone.length === 10) cleanPhone = "52" + cleanPhone; // México por defecto
+        if (cleanPhone.length === 10) cleanPhone = "52" + cleanPhone;
         waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
     } else {
         waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     }
     
     window.open(waUrl, "_blank");
+}
+
+/**
+ * Renderiza un Pase VIP Digital elegante con diseño en un elemento <canvas> (600x820)
+ */
+function renderVipPassToCanvas(canvas, guest) {
+    if (!canvas || !guest) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const accentColor = localStorage.getItem("pro-accent-color") || "#6366F1";
+    const eventTitle = (appTitleDisplay && appTitleDisplay.textContent) ? appTitleDisplay.textContent : "QR Event Check-In PRO";
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 1. Fondo principal oscuro elegante
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    bgGrad.addColorStop(0, "#0F172A");
+    bgGrad.addColorStop(1, "#1E293B");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. Franja superior decorativa (Dorado si es VIP, color de acento si es General)
+    const topGrad = ctx.createLinearGradient(0, 0, w, 0);
+    if (guest.isVip) {
+        topGrad.addColorStop(0, "#D97706");
+        topGrad.addColorStop(0.5, "#FBBF24");
+        topGrad.addColorStop(1, "#B45309");
+    } else {
+        topGrad.addColorStop(0, accentColor);
+        topGrad.addColorStop(1, "#4F46E5");
+    }
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(0, 0, w, 16);
+
+    // 3. Marco interior sutil
+    ctx.strokeStyle = guest.isVip ? "rgba(251, 191, 36, 0.4)" : "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(22, 32, w - 44, h - 54);
+
+    // 4. Etiqueta superior del pase
+    ctx.fillStyle = guest.isVip ? "#FBBF24" : "#94A3B8";
+    ctx.font = "bold 18px 'Outfit', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(guest.isVip ? "★ PASE DE ACCESO VIP ★" : "PASE DE ACCESO PERSONAL", w / 2, 76);
+
+    // 5. Nombre del Evento
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "800 28px 'Outfit', sans-serif";
+    ctx.fillText(eventTitle.length > 32 ? eventTitle.substring(0, 32) + "..." : eventTitle, w / 2, 118);
+
+    // Línea divisoria punteada tipo boleto
+    ctx.save();
+    ctx.setLineDash([8, 6]);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.beginPath();
+    ctx.moveTo(45, 145);
+    ctx.lineTo(w - 45, 145);
+    ctx.stroke();
+    ctx.restore();
+
+    // 6. Recuadro blanco para el código QR de alto contraste
+    const qrBoxSize = 310;
+    const qrBoxX = (w - qrBoxSize) / 2;
+    const qrBoxY = 175;
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    if (ctx.roundRect) {
+        ctx.roundRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 18);
+    } else {
+        ctx.rect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize);
+    }
+    ctx.fill();
+
+    // Dibujar módulos del QR directamente en el Canvas (100% síncrono y nítido)
+    try {
+        const qr = qrcode(0, 'H');
+        qr.addData(guest.qrValue || guest.id);
+        qr.make();
+        const moduleCount = qr.getModuleCount();
+        const padding = 24;
+        const availSize = qrBoxSize - (padding * 2);
+        const tileW = availSize / moduleCount;
+
+        ctx.fillStyle = "#0F172A";
+        for (let r = 0; r < moduleCount; r++) {
+            for (let c = 0; c < moduleCount; c++) {
+                if (qr.isDark(r, c)) {
+                    const x = qrBoxX + padding + (c * tileW);
+                    const y = qrBoxY + padding + (r * tileW);
+                    ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(tileW), Math.ceil(tileW));
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error dibujando QR en canvas:", e);
+    }
+
+    // 7. Nombre del Invitado
+    ctx.fillStyle = "#94A3B8";
+    ctx.font = "600 15px 'Outfit', sans-serif";
+    ctx.fillText("INVITADO / FAMILIA", w / 2, 530);
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "800 30px 'Outfit', sans-serif";
+    const displayName = guest.name.length > 28 ? guest.name.substring(0, 28) + "..." : guest.name;
+    ctx.fillText(displayName, w / 2, 568);
+
+    // 8. Cajas de Metadatos (Pases, Mesa, Código ID)
+    const boxY = 605;
+    const boxH = 95;
+    const boxW = 155;
+    const gap = 16;
+    const startX = (w - (boxW * 3 + gap * 2)) / 2;
+
+    const metaItems = [
+        { label: "PASES VÁLIDOS", val: `${guest.quantity} ${guest.quantity > 1 ? 'Personas' : 'Persona'}` },
+        { label: "MESA / ZONA", val: (guest.table && guest.table !== "-") ? guest.table : "General" },
+        { label: "CÓDIGO ID", val: guest.qrValue || guest.id }
+    ];
+
+    metaItems.forEach((item, idx) => {
+        const bx = startX + idx * (boxW + gap);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(bx, boxY, boxW, boxH, 12);
+        } else {
+            ctx.rect(bx, boxY, boxW, boxH);
+        }
+        ctx.fill();
+
+        ctx.fillStyle = "#94A3B8";
+        ctx.font = "bold 12px 'Outfit', sans-serif";
+        ctx.fillText(item.label, bx + boxW / 2, boxY + 32);
+
+        ctx.fillStyle = guest.isVip && idx === 1 ? "#FBBF24" : "#F8FAFC";
+        ctx.font = "800 20px 'Outfit', sans-serif";
+        const shortVal = String(item.val).length > 13 ? String(item.val).substring(0, 13) : String(item.val);
+        ctx.fillText(shortVal, bx + boxW / 2, boxY + 66);
+    });
+
+    // 9. Pie del boleto
+    ctx.fillStyle = "#64748B";
+    ctx.font = "500 14px 'Outfit', sans-serif";
+    ctx.fillText("Presenta este pase digital en la entrada con el brillo de tu pantalla al máximo.", w / 2, 755);
 }
 
 function openIndividualQrModal(guestId) {
@@ -1795,13 +2156,9 @@ function openIndividualQrModal(guestId) {
     indivGuestQty.textContent = guest.quantity;
     indivGuestTable.textContent = guest.table || "-";
 
-    try {
-        const qr = qrcode(0, 'M');
-        qr.addData(guest.qrValue || guest.id);
-        qr.make();
-        indivQrCodeBox.innerHTML = qr.createImgTag(5, 8);
-    } catch(e) {
-        indivQrCodeBox.innerHTML = `<span style="color:red">Error generando QR</span>`;
+    const vipCanvas = document.getElementById("vip-pass-canvas");
+    if (vipCanvas) {
+        renderVipPassToCanvas(vipCanvas, guest);
     }
 
     indivWaBtn.onclick = () => sharePassWhatsApp(guest.id);
@@ -1811,11 +2168,11 @@ function openIndividualQrModal(guestId) {
 }
 
 function downloadIndividualQrImage(guest) {
-    const img = indivQrCodeBox.querySelector("img");
-    if (!img) return;
+    const vipCanvas = document.getElementById("vip-pass-canvas");
+    if (!vipCanvas) return;
     const a = document.createElement("a");
-    a.href = img.src;
-    a.download = `Pase_QR_${guest.id}_${guest.name.replace(/\s+/g, '_')}.png`;
+    a.href = vipCanvas.toDataURL("image/png");
+    a.download = `Pase_VIP_${guest.id}_${guest.name.replace(/\s+/g, '_')}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1838,10 +2195,14 @@ function openExecutiveReport() {
     const pending = total - attended;
     const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
 
+    const totalPasses = guestData.reduce((sum, g) => sum + (g.quantity || 1), 0);
+    const attendedPasses = guestData.reduce((sum, g) => sum + getAttendedPassesCount(g), 0);
+    const pendingPasses = Math.max(0, totalPasses - attendedPasses);
+
     repEventTitle.textContent = "Evento: " + (appTitleDisplay ? appTitleDisplay.textContent : "AccesoQR PRO");
-    repTotalGuests.textContent = total;
-    repTotalAttended.textContent = attended;
-    repTotalPending.textContent = pending;
+    repTotalGuests.innerHTML = `${total} <small style="display:block;font-size:0.7rem;font-weight:500;opacity:0.8;">(${totalPasses} pases)</small>`;
+    repTotalAttended.innerHTML = `${attended} <small style="display:block;font-size:0.7rem;font-weight:500;opacity:0.8;">(${attendedPasses} pers.)</small>`;
+    repTotalPending.innerHTML = `${pending} <small style="display:block;font-size:0.7rem;font-weight:500;opacity:0.8;">(${pendingPasses} pers.)</small>`;
     repPercentage.textContent = `${percentage}%`;
 
     // Calcular hora pico
@@ -1862,19 +2223,17 @@ function openExecutiveReport() {
     });
 
     repPeakHour.textContent = peakHour !== "--:--" ? peakHour : (attended > 0 ? "Registro continuo" : "--:--");
-    repPeakRate.textContent = `${peakCount} asistentes`;
+    repPeakRate.textContent = `${peakCount > 0 ? peakCount : attendedPasses} asistentes`;
 
-    // Desglose por mesas
+    // Desglose por mesas (soportando entradas parciales reales)
     const tableStats = {};
     guestData.forEach(g => {
         const t = (g.table && g.table !== "-") ? g.table : "Sin Mesa";
         if (!tableStats[t]) {
             tableStats[t] = { total: 0, attended: 0 };
         }
-        tableStats[t].total += g.quantity;
-        if (g.attendance && g.attendance.toLowerCase().trim() !== "") {
-            tableStats[t].attended += g.quantity;
-        }
+        tableStats[t].total += (g.quantity || 1);
+        tableStats[t].attended += getAttendedPassesCount(g);
     });
 
     const tablesHtml = Object.keys(tableStats).map(t => {

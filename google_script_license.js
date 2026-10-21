@@ -33,10 +33,15 @@ function handleLicenseRequest(e) {
       }
     }
 
-    // Soporte para Payload Cifrado/Codificado en Base64
+    // Soporte para Payload Cifrado/Codificado en Base64 (compatible con UTF-8 directo y encodeURIComponent)
     if (params.payload) {
       try {
-        var decodedPayloadStr = Utilities.newBlob(Utilities.base64Decode(params.payload)).getDataAsString();
+        var decodedPayloadStr = Utilities.newBlob(Utilities.base64Decode(params.payload)).getDataAsString("UTF-8");
+        if (decodedPayloadStr.indexOf("%7B") === 0 || decodedPayloadStr.indexOf("%") !== -1) {
+          try {
+            decodedPayloadStr = decodeURIComponent(decodedPayloadStr);
+          } catch (uriErr) {}
+        }
         var decodedObj = JSON.parse(decodedPayloadStr);
         params = Object.assign({}, params, decodedObj);
       } catch(decErr) {
@@ -54,7 +59,20 @@ function handleLicenseRequest(e) {
       }));
     }
 
-    // --- SEGURIDAD: RATE LIMITING (ANTI-FUERZA BRUTA POR DISPOSITIVO) ---
+    // Validación de frescura de Timestamp (Anti-Replay Attack: ventana de 15 minutos si se incluye ts)
+    if (params.ts) {
+      var reqTs = parseInt(params.ts, 10);
+      if (!isNaN(reqTs) && Math.abs(Date.now() - reqTs) > 15 * 60 * 1000) {
+        return output.setContent(JSON.stringify({
+          success: false,
+          message: "La solicitud de activación expiró. Verifica la hora de tu dispositivo e intenta nuevamente."
+        }));
+      }
+    }
+
+    // --- SEGURIDAD: BLOQUEO DE CONCURRENCIA (LOCK SERVICE) ---
+    var lock = LockService.getScriptLock();
+    lock.waitLock(10000);
     var cache = CacheService.getScriptCache();
     var attemptsKey = "sec_att_" + deviceId.replace(/[^a-zA-Z0-9_-]/g, "");
     var failedAttempts = parseInt(cache.get(attemptsKey) || "0", 10);

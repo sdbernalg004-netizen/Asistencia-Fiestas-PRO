@@ -1294,6 +1294,102 @@ body.light-theme .btn-filter.active {
 }
 
 /* ============================================================================
+ * 🪟 MODALES FLOTANTES (GUÍA, PASE VIP, REPORTE EJECUTIVO Y WALK-IN)
+ * ============================================================================ */
+.license-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.license-modal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    color: var(--text-primary);
+    animation: fadeInModal 0.2s ease-out;
+}
+
+body.light-theme .license-modal-card {
+    background: #FFFFFF;
+    color: #0F172A;
+    border-color: #CBD5E1;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.stat-sub-passes {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+.door-selector-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 4px 10px;
+}
+
+.door-input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    width: 105px;
+    outline: none;
+}
+
+.btn-walkin {
+    background: linear-gradient(135deg, var(--accent), #4F46E5);
+    color: #FFF;
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+}
+
+.btn-walkin:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.btn-walkin:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ============================================================================
  * 📄 REPORTE EJECUTIVO IMPRIMIBLE (@media print)
  * ============================================================================ */
 @media print {
@@ -1302,23 +1398,37 @@ body.light-theme .btn-filter.active {
         color: #000 !important;
         padding: 0 !important;
     }
-    .app-header, .panel-right, .nav-tabs, .file-loader-card, .list-controls, .btn-action, .download-card, .pro-card {
+    .app-container, #license-lock-screen, #guide-modal, #individual-qr-modal, #walkin-guest-modal, #close-rep-modal-btn, #print-rep-btn {
         display: none !important;
     }
-    .app-container {
-        max-width: 100% !important;
+    #executive-report-modal {
+        position: static !important;
+        display: block !important;
+        background: #FFF !important;
+        width: 100% !important;
+        height: auto !important;
+        padding: 0 !important;
+        overflow: visible !important;
     }
-    .stats-card, .guest-list-section {
+    #executive-report-modal .license-modal-card {
+        max-width: 100% !important;
+        max-height: none !important;
         box-shadow: none !important;
         border: 1px solid #CCC !important;
-        page-break-inside: avoid;
+        background: #FFF !important;
+        color: #000 !important;
+        overflow: visible !important;
     }
-    .executive-report-header {
-        display: block !important;
-        margin-bottom: 2rem;
-        text-align: center;
-        border-bottom: 2px solid #333;
-        padding-bottom: 1rem;
+    #rep-tables-breakdown {
+        max-height: none !important;
+        overflow: visible !important;
+        background: #F8FAFC !important;
+        color: #000 !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    #rep-peak-hour {
+        color: #000 !important;
     }
 }
+
 

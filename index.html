@@ -48,7 +48,7 @@
             </div>
             
             <!-- Desafío Interactivo Anti-Bot -->
-            <div id="anti-bot-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">
+            <div id="anti-bot-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 8px; margin-bottom: 12px; text-align: left;">
                 <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
                     <i class="ti ti-robot text-accent"></i> Verificación Humana Anti-Bot:
                 </label>
@@ -146,14 +146,17 @@
                             <div class="stat-box">
                                 <span class="stat-val" id="stat-total">0</span>
                                 <span class="stat-lbl" data-i18n="statGuests">Invitados</span>
+                                <span class="stat-sub-passes" id="stat-total-passes">0 pases</span>
                             </div>
                             <div class="stat-box success">
                                 <span class="stat-val" id="stat-attended">0</span>
                                 <span class="stat-lbl" data-i18n="statAttended">Asistieron</span>
+                                <span class="stat-sub-passes" id="stat-attended-passes">0 personas</span>
                             </div>
                             <div class="stat-box info">
                                 <span class="stat-val" id="stat-pending">0</span>
                                 <span class="stat-lbl" data-i18n="statPending">Pendientes</span>
+                                <span class="stat-sub-passes" id="stat-pending-passes">0 personas</span>
                             </div>
                         </div>
                         
@@ -189,9 +192,13 @@
                 <section class="panel-right">
                     <!-- Card 4: Scanner -->
                     <div class="card scanner-card">
-                        <div class="scanner-header">
+                        <div class="scanner-header" style="flex-wrap: wrap; gap: 8px;">
                             <h2><i class="ti ti-device-camera"></i> <span data-i18n="scannerTitle">Escáner QR</span></h2>
-                            <div class="camera-controls" style="display: flex; align-items: center; gap: 8px;">
+                            <div class="camera-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <div class="door-selector-box" title="Identificador de esta puerta o recepcionista">
+                                    <i class="ti ti-door-enter text-accent"></i>
+                                    <input type="text" id="door-name-input" class="door-input" value="Puerta 1" placeholder="Ej. Puerta Norte">
+                                </div>
                                 <select id="camera-select" class="select-input">
                                     <option value="">Seleccionando cámara...</option>
                                 </select>
@@ -266,6 +273,9 @@
                             <button class="btn-filter active" data-filter="all" data-i18n="filterAll">Todos</button>
                             <button class="btn-filter" data-filter="attended" data-i18n="filterAttended">Asistieron</button>
                             <button class="btn-filter" data-filter="pending" data-i18n="filterPending">Pendientes</button>
+                            <button id="open-walkin-modal-btn" class="btn-walkin" title="Registrar invitado extra de último minuto en puerta" disabled>
+                                <i class="ti ti-user-plus"></i> <span data-i18n="walkinBtn">+ En Puerta</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -350,6 +360,14 @@
                         <span class="progress-lbl hidden" id="qr-progress-lbl">Generando: 0 / 0</span>
                     </div>
 
+                    <div class="pro-control-group" style="margin-bottom: 12px;">
+                        <label class="pro-label">Formato de descarga en el ZIP:</label>
+                        <select id="qr-zip-mode-select" class="select-input" style="width: 100%; padding: 8px 12px;">
+                            <option value="vip-card">✨ Pase VIP Digital con Diseño (Nombre, Mesa, Pases y QR)</option>
+                            <option value="raw-qr">📷 Solo Código QR Clásico (Blanco y Negro)</option>
+                        </select>
+                    </div>
+
                     <button id="generate-qrs-btn" class="btn-primary btn-block" disabled>
                         <i class="ti ti-settings-automation"></i> Generar y Descargar QRs (ZIP)
                     </button>
@@ -398,7 +416,7 @@
                                 <strong style="display: flex; align-items: center; gap: 6px;"><i class="ti ti-crown text-warning" style="color: #F59E0B;"></i> Licencia PRO Ilimitada</strong>
                                 <span style="font-size: 0.8rem; color: var(--text-secondary);">Invitados ilimitados + 4 Celulares + Generador QR.</span>
                             </div>
-                            <a href="https://sdbernalg004-netizen.github.io/landing-qr-sales/#cotizador" target="_blank" class="btn-secondary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none;">Ver Planes</a>
+                            <a href="https://sdbernalg004-netizen.github.io/VENTAS_QR_ASSIST/#cotizador" target="_blank" class="btn-secondary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none;">Ver Planes</a>
                         </div>
                     </div>
                 </div>
@@ -410,7 +428,7 @@
     <!-- Modal de Guía de Uso Rápida -->
     <div id="guide-modal" class="license-modal-overlay hidden" style="z-index: 10000;">
         <div class="license-modal-card" style="max-width: 600px; text-align: left; padding: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
                 <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
                     <i class="ti ti-help-hexagon text-accent"></i> Guía Rápida de Uso - AccesoQR
                 </h2>
@@ -422,15 +440,15 @@
                     <span style="background: var(--accent); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">1</span>
                     <div>
                         <strong style="color: white; display: block; margin-bottom: 2px;">Prepara tu Lista de Invitados en Excel</strong>
-                        Usa la estructura recomendada de columnas: <code>ID</code>, <code>Invitado</code>, <code>Cantidad</code>, <code>QR</code> y <code>Asistencia</code>. Puedes descargar una plantilla lista haciendo clic en el botón <em>"Descargar Plantilla Excel de Ejemplo"</em>.
+                        Usa la estructura recomendada de columnas: <code>ID</code>, <code>Invitado</code>, <code>Cantidad</code>, <code>Mesa</code>, <code>VIP</code>, <code>QR</code> y <code>Asistencia</code>. Puedes descargar una plantilla lista haciendo clic en el botón <em>"Descargar Plantilla Excel de Ejemplo"</em>.
                     </div>
                 </div>
 
                 <div style="display: flex; gap: 12px;">
                     <span style="background: var(--accent); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">2</span>
                     <div>
-                        <strong style="color: white; display: block; margin-bottom: 2px;">Genera los Boletos QR (Opcional)</strong>
-                        Si contrataste un plan completo, ve a la pestaña <strong>Herramientas PRO</strong> -> <strong>Generador de Boletos QR</strong> y descarga un archivo <code>.ZIP</code> con los códigos QR de todos tus invitados listos para enviar por WhatsApp o Email.
+                        <strong style="color: white; display: block; margin-bottom: 2px;">Genera los Boletos QR o Pases VIP</strong>
+                        Si contrataste un plan completo, ve a la pestaña <strong>Herramientas PRO</strong> -> <strong>Generador de Boletos QR</strong> y descarga un archivo <code>.ZIP</code> con los Pases VIP diseñados o códigos QR listos para enviar por WhatsApp o Email.
                     </div>
                 </div>
 
@@ -438,7 +456,7 @@
                     <span style="background: var(--accent); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">3</span>
                     <div>
                         <strong style="color: white; display: block; margin-bottom: 2px;">Escanea en Puerta y Sincroniza</strong>
-                        Carga el archivo Excel en la app, activa la cámara de tu celular y comienza a escanear. Si tienes internet, los accesos se sincronizan en tiempo real con otros celulares. Si no hay internet, la app guardará todo offline y podrás descargar el reporte al finalizar.
+                        Carga el archivo Excel en la app, activa la cámara de tu celular y comienza a escanear. Si tienes internet, los accesos se sincronizan en tiempo real con otros celulares. Si no hay internet, la app respalda todo automáticamente en tu dispositivo y podrás descargar el reporte al finalizar.
                     </div>
                 </div>
 
@@ -460,33 +478,85 @@
                 ¡Entendido, comenzar!
             </button>
         </div>
-    <!-- Modal para Ver y Compartir QR Individual -->
+    </div>
+
+    <!-- Modal para Ver y Compartir Pase VIP / QR Individual -->
     <div id="individual-qr-modal" class="license-modal-overlay hidden" style="z-index: 10001;">
-        <div class="license-modal-card" style="max-width: 440px; text-align: center; padding: 2rem;">
+        <div class="license-modal-card" style="max-width: 460px; text-align: center; padding: 1.75rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
-                    <i class="ti ti-qrcode text-accent"></i> Pase de Acceso Digital
+                    <i class="ti ti-ticket text-accent"></i> Pase de Acceso VIP Digital
                 </h3>
                 <button id="close-indiv-qr-modal-btn" class="btn-icon"><i class="ti ti-x"></i></button>
             </div>
             
-            <div id="indiv-qr-canvas-wrapper" style="background: #FFF; padding: 1.5rem; border-radius: 12px; display: inline-block; margin: 1rem auto; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-                <div id="indiv-qr-code-box"></div>
+            <div id="indiv-qr-canvas-wrapper" style="margin: 0.5rem auto 1rem auto; display: flex; justify-content: center;">
+                <canvas id="vip-pass-canvas" width="600" height="820" style="max-width: 100%; height: auto; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.45);"></canvas>
+                <div id="indiv-qr-code-box" class="hidden"></div>
             </div>
 
-            <h4 id="indiv-guest-name" style="font-size: 1.25rem; font-weight: 800; margin-bottom: 4px;">Nombre del Invitado</h4>
-            <div style="display: flex; justify-content: center; gap: 12px; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                <span><strong>ID:</strong> <span id="indiv-guest-id">-</span></span>
-                <span><strong>Pases:</strong> <span id="indiv-guest-qty">1</span></span>
-                <span><strong>Mesa:</strong> <span id="indiv-guest-table">-</span></span>
+            <h4 id="indiv-guest-name" class="hidden">Nombre del Invitado</h4>
+            <div class="hidden">
+                <span id="indiv-guest-id">-</span>
+                <span id="indiv-guest-qty">1</span>
+                <span id="indiv-guest-table">-</span>
             </div>
 
-            <div style="display: flex; gap: 10px; justify-content: center;">
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button id="indiv-wa-btn" class="btn-whatsapp" style="padding: 10px 16px; font-size: 0.9rem;">
                     <i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp
                 </button>
-                <button id="indiv-download-btn" class="btn-secondary" style="padding: 10px 16px; font-size: 0.9rem;">
-                    <i class="ti ti-download"></i> Descargar Imagen
+                <button id="indiv-download-btn" class="btn-primary" style="padding: 10px 16px; font-size: 0.9rem;">
+                    <i class="ti ti-download"></i> Descargar Pase PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Registrar Invitado Extra en Puerta (Walk-in Check-in) -->
+    <div id="walkin-guest-modal" class="license-modal-overlay hidden" style="z-index: 10001;">
+        <div class="license-modal-card" style="max-width: 460px; text-align: left; padding: 1.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem;">
+                <h3 style="font-size: 1.2rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i class="ti ti-user-plus text-accent"></i> Registrar Invitado en Puerta
+                </h3>
+                <button id="close-walkin-modal-btn" class="btn-icon"><i class="ti ti-x"></i></button>
+            </div>
+
+            <div class="pro-control-group">
+                <label class="pro-label">Nombre Completo o Familia *</label>
+                <input type="text" id="walkin-name-input" class="text-input-pro" placeholder="Ej. Familia Gómez / Invitado Extra">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="pro-control-group">
+                    <label class="pro-label">Pases / Personas</label>
+                    <input type="number" id="walkin-qty-input" class="text-input-pro" value="1" min="1" max="25">
+                </div>
+                <div class="pro-control-group">
+                    <label class="pro-label">Mesa Asignada</label>
+                    <input type="text" id="walkin-table-input" class="text-input-pro" placeholder="Ej. Mesa 12">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="pro-control-group">
+                    <label class="pro-label">Categoría</label>
+                    <select id="walkin-vip-select" class="select-input" style="width: 100%; padding: 10px;">
+                        <option value="No">General</option>
+                        <option value="VIP">👑 Invitado VIP</option>
+                    </select>
+                </div>
+                <div class="pro-control-group">
+                    <label class="pro-label">Notas / Observaciones</label>
+                    <input type="text" id="walkin-notes-input" class="text-input-pro" placeholder="Autorizado por...">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1rem;">
+                <button id="cancel-walkin-btn" class="btn-secondary">Cancelar</button>
+                <button id="save-walkin-btn" class="btn-primary">
+                    <i class="ti ti-circle-check"></i> Registrar y Dar Acceso
                 </button>
             </div>
         </div>
