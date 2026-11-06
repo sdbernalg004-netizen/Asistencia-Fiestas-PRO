@@ -1,25 +1,25 @@
 /* Custom Stylesheet for QR Event Check-In PRO */
 
 :root {
-    --bg-main: #0B0F19;
-    --bg-card: #161D30;
-    --bg-card-hover: #1E2942;
-    --text-primary: #F3F4F6;
-    --text-secondary: #9CA3AF;
-    --accent: #6366F1; /* Dynamic variable overriden by JS */
-    --accent-gradient: linear-gradient(135deg, var(--accent), #A855F7);
-    --accent-glow: rgba(99, 102, 241, 0.15);
+    --bg-main: #141312;
+    --bg-card: #1C1A18;
+    --bg-card-hover: #262320;
+    --text-primary: #FAF9F5;
+    --text-secondary: #A8A29E;
+    --accent: #C5A059; /* Dynamic variable overriden by JS - Default Champagne Gold */
+    --accent-gradient: linear-gradient(135deg, var(--accent), #A47B2C);
+    --accent-glow: rgba(197, 160, 89, 0.18);
     --success: #10B981;
-    --success-light: rgba(16, 185, 129, 0.1);
+    --success-light: rgba(16, 185, 129, 0.12);
     --warning: #F59E0B;
-    --warning-light: rgba(245, 158, 11, 0.1);
+    --warning-light: rgba(245, 158, 11, 0.12);
     --danger: #EF4444;
-    --danger-light: rgba(239, 68, 68, 0.1);
-    --border: #2D3748;
+    --danger-light: rgba(239, 68, 68, 0.12);
+    --border: #332F2B;
     --radius-lg: 16px;
     --radius-md: 8px;
-    --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+    --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -1057,72 +1057,72 @@ button:disabled {
  * ☀️ MODO DÍA DE ALTO CONTRASTE (SUNLIGHT MODE PARA EXTERIORES / JARDINES)
  * ============================================================================ */
 body.light-theme {
-    --bg-main: #F8FAFC;
+    --bg-main: #FAF9F5;
     --bg-card: #FFFFFF;
-    --bg-card-hover: #F1F5F9;
-    --text-primary: #0F172A;
-    --text-secondary: #475569;
-    --border: #CBD5E1;
-    --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    --bg-card-hover: #F3EFEA;
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --border: #E2DDD3;
+    --shadow-premium: 0 10px 25px -5px rgba(28, 25, 23, 0.06), 0 8px 10px -6px rgba(28, 25, 23, 0.03);
 }
 
 body.light-theme .logo-container h1 {
-    background: linear-gradient(135deg, #0F172A, #334155);
+    background: linear-gradient(135deg, #1C1917, #57534E);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 body.light-theme .stat-box {
-    background: #F8FAFC;
-    border-color: #E2E8F0;
+    background: #FAF9F5;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .nav-tabs {
-    background: #E2E8F0;
-    border-color: #CBD5E1;
+    background: #F3EFEA;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .tab-btn {
-    color: #475569;
+    color: #57534E;
 }
 
 body.light-theme .tab-btn.active {
     background: #FFFFFF;
     color: var(--accent);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 4px rgba(28, 25, 23, 0.05);
 }
 
 body.light-theme .guest-table th {
-    background: #F1F5F9;
-    color: #334155;
-    border-color: #E2E8F0;
+    background: #F3EFEA;
+    color: #1C1917;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .guest-table td {
-    border-color: #E2E8F0;
-    color: #0F172A;
+    border-color: #E2DDD3;
+    color: #1C1917;
 }
 
 body.light-theme .guest-table tr:hover {
-    background: rgba(99, 102, 241, 0.04);
+    background: rgba(197, 160, 89, 0.06);
 }
 
 body.light-theme .guest-meta-grid {
-    background: #F8FAFC;
-    border-color: #E2E8F0;
+    background: #FAF9F5;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .select-input,
 body.light-theme .search-input {
     background: #FFFFFF;
-    color: #0F172A;
-    border-color: #CBD5E1;
+    color: #1C1917;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .btn-filter {
     background: #FFFFFF;
-    color: #475569;
-    border-color: #CBD5E1;
+    color: #57534E;
+    border-color: #E2DDD3;
 }
 
 body.light-theme .btn-filter.active {
@@ -1326,8 +1326,8 @@ body.light-theme .btn-filter.active {
 
 body.light-theme .license-modal-card {
     background: #FFFFFF;
-    color: #0F172A;
-    border-color: #CBD5E1;
+    color: #1C1917;
+    border-color: #E2DDD3;
 }
 
 @keyframes fadeInModal {

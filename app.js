@@ -727,9 +727,9 @@ function setupBrandingHandlers() {
         localStorage.removeItem("pro-app-logo");
         
         // Reset defaults
-        applyAccentColor("#6366F1");
-        themeColorPicker.value = "#6366F1";
-        themeColorCode.textContent = "#6366F1";
+        applyAccentColor("#C5A059");
+        themeColorPicker.value = "#C5A059";
+        themeColorCode.textContent = "#C5A059";
         
         appTitleDisplay.textContent = "QR Event Check-In PRO";
         appTitleInput.value = "";
@@ -2008,38 +2008,33 @@ function renderVipPassToCanvas(canvas, guest) {
     const w = canvas.width;
     const h = canvas.height;
 
-    const accentColor = localStorage.getItem("pro-accent-color") || "#6366F1";
+    const accentColor = localStorage.getItem("pro-accent-color") || "#C5A059";
     const eventTitle = (appTitleDisplay && appTitleDisplay.textContent) ? appTitleDisplay.textContent : "QR Event Check-In PRO";
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Fondo principal oscuro elegante
+    // 1. Fondo principal obsidiana de gala cálido
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, "#0F172A");
-    bgGrad.addColorStop(1, "#1E293B");
+    bgGrad.addColorStop(0, "#141312");
+    bgGrad.addColorStop(1, "#1C1A18");
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Franja superior decorativa (Dorado si es VIP, color de acento si es General)
+    // 2. Franja superior decorativa en Oro Champagne
     const topGrad = ctx.createLinearGradient(0, 0, w, 0);
-    if (guest.isVip) {
-        topGrad.addColorStop(0, "#D97706");
-        topGrad.addColorStop(0.5, "#FBBF24");
-        topGrad.addColorStop(1, "#B45309");
-    } else {
-        topGrad.addColorStop(0, accentColor);
-        topGrad.addColorStop(1, "#4F46E5");
-    }
+    topGrad.addColorStop(0, "#A47B2C");
+    topGrad.addColorStop(0.5, "#C5A059");
+    topGrad.addColorStop(1, "#E5D5B8");
     ctx.fillStyle = topGrad;
     ctx.fillRect(0, 0, w, 16);
 
-    // 3. Marco interior sutil
-    ctx.strokeStyle = guest.isVip ? "rgba(251, 191, 36, 0.4)" : "rgba(255, 255, 255, 0.12)";
+    // 3. Marco interior refinado con filete dorado
+    ctx.strokeStyle = guest.isVip ? "rgba(197, 160, 89, 0.55)" : "rgba(229, 213, 184, 0.2)";
     ctx.lineWidth = 2;
     ctx.strokeRect(22, 32, w - 44, h - 54);
 
     // 4. Etiqueta superior del pase
-    ctx.fillStyle = guest.isVip ? "#FBBF24" : "#94A3B8";
+    ctx.fillStyle = guest.isVip ? "#C5A059" : "#A8A29E";
     ctx.font = "bold 18px 'Outfit', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(guest.isVip ? "★ PASE DE ACCESO VIP ★" : "PASE DE ACCESO PERSONAL", w / 2, 76);
