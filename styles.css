@@ -33,8 +33,9 @@ body {
     background-color: var(--bg-main);
     color: var(--text-primary);
     min-height: 100vh;
-    padding: 2rem;
+    padding: 1.5rem;
     line-height: 1.5;
+    overflow-x: hidden;
 }
 
 .app-container {
@@ -100,6 +101,14 @@ body {
     border: 1px solid var(--border);
     padding: 4px;
     border-radius: var(--radius-md);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-width: 100%;
+}
+
+.nav-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tab-btn {
@@ -116,6 +125,8 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .tab-btn.active {
@@ -1387,6 +1398,201 @@ body.light-theme .license-modal-card {
 .btn-walkin:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* ============================================================================
+ * 📱 SISTEMA ADAPTATIVO & RESPONSIVE (Móviles, Tablets, Safe Areas)
+ * ============================================================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 0.75rem 0.6rem;
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-container {
+        gap: 1.25rem;
+    }
+
+    .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .logo-container {
+        width: 100%;
+    }
+
+    .logo-container h1 {
+        font-size: clamp(1.3rem, 5vw, 1.7rem);
+    }
+
+    .logo-icon, .custom-logo {
+        width: 42px;
+        height: 42px;
+        font-size: 1.8rem;
+    }
+
+    .header-indicators {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        align-items: center;
+        justify-content: flex-start;
+    }
+
+    .door-badge-box, .file-status-indicator {
+        font-size: 0.76rem;
+        padding: 4px 10px;
+    }
+
+    .door-input {
+        width: 85px;
+        font-size: 0.76rem;
+    }
+
+    /* Tabs Móviles con Scroll Suave */
+    .nav-tabs {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .tab-btn {
+        padding: 8px 14px;
+        font-size: 0.82rem;
+    }
+
+    /* Escáner & Paneles */
+    .app-content {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .scanner-box {
+        max-height: 44vh;
+        border-radius: var(--radius-md);
+    }
+
+    /* Grid de Estadísticas Adaptativo */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+
+    .stat-box {
+        padding: 0.85rem 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    /* Controles de Lista */
+    .list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .list-header h2 {
+        font-size: 1.15rem;
+    }
+
+    .list-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.6rem;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .search-box input {
+        width: 100%;
+        font-size: 0.88rem;
+    }
+
+    .filter-box {
+        width: 100%;
+        display: flex;
+    }
+
+    .btn-filter {
+        flex: 1;
+        text-align: center;
+        padding: 7px 6px;
+        font-size: 0.78rem;
+    }
+
+    .btn-walkin {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+        font-size: 0.88rem;
+    }
+
+    /* Resultado de Escaneo Móvil */
+    .result-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .guest-meta-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        font-size: 0.75rem;
+    }
+
+    /* Modales Móviles */
+    .modal-overlay {
+        padding: 0.75rem;
+    }
+
+    .modal-card,
+    .license-modal-card,
+    .license-lock-screen .lock-card {
+        max-width: 100%;
+        width: 100%;
+        max-height: 92vh;
+        padding: 1.25rem 1rem;
+        border-radius: 14px;
+    }
+
+    /* Pases de Tabla Touch-Friendly */
+    .guest-table th, .guest-table td {
+        padding: 10px 10px;
+        font-size: 0.82rem;
+    }
+
+    .btn-action-qr {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-label {
+        font-size: 0.68rem;
+    }
+
+    .stat-value {
+        font-size: 1.35rem;
+    }
+
+    .guest-meta-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* ============================================================================
