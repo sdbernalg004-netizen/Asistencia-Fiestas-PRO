@@ -1,9 +1,9 @@
-const CACHE_NAME = 'qr-attendance-pro-cache-v4';
+const CACHE_NAME = 'qr-attendance-pro-cache-v5';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=5.0',
+  './app.js?v=5.0',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -21,8 +21,8 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker PRO] Pre-caching static assets');
-      return cache.addAll(ASSETS);
+      console.log('[Service Worker PRO] Pre-caching static assets v5');
+      return cache.addAll(ASSETS).catch(err => console.warn('Asset cache warning:', err));
     }).then(() => self.skipWaiting())
   );
 });
@@ -42,30 +42,51 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Estrategia Network-First para archivos locales (siempre fresco si hay red, offline seguro si no hay)
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith('http')) return;
 
+  const url = new URL(event.request.url);
+  const isLocalAsset = url.origin === self.location.origin;
+
+  if (isLocalAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            if (event.request.headers.get('accept')?.includes('text/html')) {
+              return caches.match('./index.html') || caches.match('./');
+            }
+          });
+        })
+    );
+    return;
+  }
+
+  // Para librerías externas en CDN: Cache-First con fallback a red
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-
       return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' && !event.request.url.includes('cdn') && !event.request.url.includes('fonts')) {
-          return networkResponse;
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
-      }).catch(() => {
-        if (event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('./index.html');
-        }
       });
     })
   );

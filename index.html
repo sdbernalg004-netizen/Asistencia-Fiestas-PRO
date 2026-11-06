@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <!-- Iconos Tabler -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=5.0">
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -639,12 +639,15 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=5.0"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker PRO registrado con éxito', reg))
+          navigator.serviceWorker.register('./sw.js?v=5.0')
+            .then(reg => {
+              console.log('Service Worker PRO registrado con éxito', reg);
+              reg.update(); // Forzar chequeo de actualización inmediata
+            })
             .catch(err => console.error('Error registrando el Service Worker PRO', err));
         });
       }
