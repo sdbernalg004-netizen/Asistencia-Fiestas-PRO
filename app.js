@@ -727,9 +727,9 @@ function setupBrandingHandlers() {
         localStorage.removeItem("pro-app-logo");
         
         // Reset defaults
-        applyAccentColor("#C5A059");
-        themeColorPicker.value = "#C5A059";
-        themeColorCode.textContent = "#C5A059";
+        applyAccentColor("#DE6443");
+        themeColorPicker.value = "#DE6443";
+        themeColorCode.textContent = "#DE6443";
         
         appTitleDisplay.textContent = "QR Event Check-In PRO";
         appTitleInput.value = "";
@@ -2008,40 +2008,40 @@ function renderVipPassToCanvas(canvas, guest) {
     const w = canvas.width;
     const h = canvas.height;
 
-    const accentColor = localStorage.getItem("pro-accent-color") || "#C5A059";
+    const accentColor = localStorage.getItem("pro-accent-color") || "#DE6443";
     const eventTitle = (appTitleDisplay && appTitleDisplay.textContent) ? appTitleDisplay.textContent : "QR Event Check-In PRO";
 
     ctx.clearRect(0, 0, w, h);
 
     // 1. Fondo principal obsidiana de gala cálido
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, "#141312");
-    bgGrad.addColorStop(1, "#1C1A18");
+    bgGrad.addColorStop(0, "#1A1412");
+    bgGrad.addColorStop(1, "#271E1C");
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Franja superior decorativa en Oro Champagne
+    // 2. Franja superior decorativa en Terracota & Cantera
     const topGrad = ctx.createLinearGradient(0, 0, w, 0);
-    topGrad.addColorStop(0, "#A47B2C");
-    topGrad.addColorStop(0.5, "#C5A059");
-    topGrad.addColorStop(1, "#E5D5B8");
+    topGrad.addColorStop(0, "#8E4939");
+    topGrad.addColorStop(0.5, "#DE6443");
+    topGrad.addColorStop(1, "#BA6E5B");
     ctx.fillStyle = topGrad;
     ctx.fillRect(0, 0, w, 16);
 
-    // 3. Marco interior refinado con filete dorado
-    ctx.strokeStyle = guest.isVip ? "rgba(197, 160, 89, 0.55)" : "rgba(229, 213, 184, 0.2)";
+    // 3. Marco interior refinado con filete de autor
+    ctx.strokeStyle = guest.isVip ? "rgba(222, 100, 67, 0.65)" : "rgba(212, 197, 188, 0.2)";
     ctx.lineWidth = 2;
     ctx.strokeRect(22, 32, w - 44, h - 54);
 
     // 4. Etiqueta superior del pase
-    ctx.fillStyle = guest.isVip ? "#C5A059" : "#A8A29E";
-    ctx.font = "bold 18px 'Outfit', sans-serif";
+    ctx.fillStyle = guest.isVip ? "#DE6443" : "#D4C5BC";
+    ctx.font = "bold 18px 'Urbanist', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(guest.isVip ? "★ PASE DE ACCESO VIP ★" : "PASE DE ACCESO PERSONAL", w / 2, 76);
 
     // 5. Nombre del Evento
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "800 28px 'Outfit', sans-serif";
+    ctx.fillStyle = "#F5EDE6";
+    ctx.font = "700 28px 'Lora', serif";
     ctx.fillText(eventTitle.length > 32 ? eventTitle.substring(0, 32) + "..." : eventTitle, w / 2, 118);
 
     // Línea divisoria punteada tipo boleto
@@ -2093,12 +2093,12 @@ function renderVipPassToCanvas(canvas, guest) {
     }
 
     // 7. Nombre del Invitado
-    ctx.fillStyle = "#94A3B8";
-    ctx.font = "600 15px 'Outfit', sans-serif";
+    ctx.fillStyle = "#A89890";
+    ctx.font = "600 15px 'Urbanist', sans-serif";
     ctx.fillText("INVITADO / FAMILIA", w / 2, 530);
 
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "800 30px 'Outfit', sans-serif";
+    ctx.fillStyle = "#F5EDE6";
+    ctx.font = "700 30px 'Lora', serif";
     const displayName = guest.name.length > 28 ? guest.name.substring(0, 28) + "..." : guest.name;
     ctx.fillText(displayName, w / 2, 568);
 
@@ -2126,19 +2126,19 @@ function renderVipPassToCanvas(canvas, guest) {
         }
         ctx.fill();
 
-        ctx.fillStyle = "#94A3B8";
-        ctx.font = "bold 12px 'Outfit', sans-serif";
+        ctx.fillStyle = "#D4C5BC";
+        ctx.font = "bold 12px 'Urbanist', sans-serif";
         ctx.fillText(item.label, bx + boxW / 2, boxY + 32);
 
-        ctx.fillStyle = guest.isVip && idx === 1 ? "#FBBF24" : "#F8FAFC";
-        ctx.font = "800 20px 'Outfit', sans-serif";
+        ctx.fillStyle = guest.isVip && idx === 1 ? "#DE6443" : "#F5EDE6";
+        ctx.font = "800 20px 'Urbanist', sans-serif";
         const shortVal = String(item.val).length > 13 ? String(item.val).substring(0, 13) : String(item.val);
         ctx.fillText(shortVal, bx + boxW / 2, boxY + 66);
     });
 
     // 9. Pie del boleto
-    ctx.fillStyle = "#64748B";
-    ctx.font = "500 14px 'Outfit', sans-serif";
+    ctx.fillStyle = "#A89890";
+    ctx.font = "500 14px 'Urbanist', sans-serif";
     ctx.fillText("Presenta este pase digital en la entrada con el brillo de tu pantalla al máximo.", w / 2, 755);
 }
 
