@@ -1,9 +1,9 @@
-const CACHE_NAME = 'qr-attendance-pro-cache-v6';
+const CACHE_NAME = 'qr-attendance-pro-cache-v7';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=6.0',
-  './app.js?v=6.0',
+  './styles.css?v=7.0',
+  './app.js?v=7.0',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -12,7 +12,7 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
   'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css',
+  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.28.0/dist/tabler-icons.min.css',
   'https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Urbanist:wght@400;500;600;700;800&display=swap',
   'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js'
@@ -21,7 +21,7 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker PRO] Pre-caching static assets v6');
+      console.log('[Service Worker PRO] Pre-caching static assets v7');
       return cache.addAll(ASSETS).catch(err => console.warn('Asset cache warning:', err));
     }).then(() => self.skipWaiting())
   );

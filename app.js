@@ -54,7 +54,8 @@ if (isFirebaseActive) {
  */
 function syncCheckInToFirebase(guestId, attended, time, door = "Puerta 1", attendanceStr = "") {
     if (!isFirebaseActive) return;
-    const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
+    const licenseKey = secureGetKey("pro-active-license-key");
+    if (!licenseKey) return;
     const cleanKey = sanitizeFirebaseKey(licenseKey);
     const cleanEvent = sanitizeFirebaseKey(activeSheetName || "Evento");
     const cleanGuestId = sanitizeFirebaseKey(guestId);
@@ -745,13 +746,19 @@ function setupBrandingHandlers() {
 }
 
 function loadSavedBranding() {
-    const savedColor = localStorage.getItem("pro-accent-color");
+    let savedColor = localStorage.getItem("pro-accent-color");
     const savedTitle = localStorage.getItem("pro-app-title");
     const savedLogo = localStorage.getItem("pro-app-logo");
 
+    // Migración automática de dorados legados al terracota de gala
+    if (savedColor && (savedColor.toUpperCase() === "#C5A059" || savedColor.toUpperCase() === "#D4AF37")) {
+        savedColor = "#DE6443";
+        localStorage.setItem("pro-accent-color", savedColor);
+    }
+
     if (savedColor) {
-        themeColorPicker.value = savedColor;
-        themeColorCode.textContent = savedColor.toUpperCase();
+        if (themeColorPicker) themeColorPicker.value = savedColor;
+        if (themeColorCode) themeColorCode.textContent = savedColor.toUpperCase();
         applyAccentColor(savedColor);
     }
     
@@ -900,7 +907,8 @@ function activateLoadedGuestSession(fileName = "Sesión Restaurada.xlsx") {
     
     // Sincronización en tiempo real Firebase
     if (isFirebaseActive && activeSheetName) {
-        const licenseKey = secureGetKey("pro-active-license-key") || "TEST-123-KEY";
+        const licenseKey = secureGetKey("pro-active-license-key");
+        if (!licenseKey) return;
         const cleanKey = sanitizeFirebaseKey(licenseKey);
         const cleanEvent = sanitizeFirebaseKey(activeSheetName);
         
@@ -1481,7 +1489,7 @@ function exportUpdatedExcel() {
 }
 
 // PRO FEATURE: QR Generator & Bulk ZIP Downloader (Soporta Pases VIP con Diseño o QRs simples)
-function generateBulkQrsZip() {
+async function generateBulkQrsZip() {
     if (guestData.length === 0) return;
 
     generateQrsBtn.setAttribute("disabled", "true");
@@ -1490,6 +1498,10 @@ function generateBulkQrsZip() {
 
     const zipModeSelect = document.getElementById("qr-zip-mode-select");
     const zipMode = zipModeSelect ? zipModeSelect.value : "vip-card";
+
+    if (zipMode === "vip-card") {
+        await ensureFontsLoaded();
+    }
 
     const zip = new JSZip();
     let currentIdx = 0;
@@ -2000,6 +2012,24 @@ function sharePassWhatsApp(guestId) {
 }
 
 /**
+ * Garantiza que las fuentes 'Lora' y 'Urbanist' estén cargadas antes de dibujar en Canvas
+ */
+async function ensureFontsLoaded() {
+    if (document.fonts && document.fonts.load) {
+        try {
+            await Promise.all([
+                document.fonts.load("bold 18px Urbanist"),
+                document.fonts.load("700 28px Lora"),
+                document.fonts.load("700 30px Lora"),
+                document.fonts.load("800 20px Urbanist")
+            ]);
+        } catch (e) {
+            // Silencioso en modo offline
+        }
+    }
+}
+
+/**
  * Renderiza un Pase VIP Digital elegante con diseño en un elemento <canvas> (600x820)
  */
 function renderVipPassToCanvas(canvas, guest) {
@@ -2020,21 +2050,21 @@ function renderVipPassToCanvas(canvas, guest) {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Franja superior decorativa en Terracota & Cantera
+    // 2. Franja superior decorativa dinámica
     const topGrad = ctx.createLinearGradient(0, 0, w, 0);
     topGrad.addColorStop(0, "#8E4939");
-    topGrad.addColorStop(0.5, "#DE6443");
+    topGrad.addColorStop(0.5, accentColor);
     topGrad.addColorStop(1, "#BA6E5B");
     ctx.fillStyle = topGrad;
     ctx.fillRect(0, 0, w, 16);
 
     // 3. Marco interior refinado con filete de autor
-    ctx.strokeStyle = guest.isVip ? "rgba(222, 100, 67, 0.65)" : "rgba(212, 197, 188, 0.2)";
+    ctx.strokeStyle = guest.isVip ? accentColor : "rgba(212, 197, 188, 0.2)";
     ctx.lineWidth = 2;
     ctx.strokeRect(22, 32, w - 44, h - 54);
 
     // 4. Etiqueta superior del pase
-    ctx.fillStyle = guest.isVip ? "#DE6443" : "#D4C5BC";
+    ctx.fillStyle = guest.isVip ? accentColor : "#D4C5BC";
     ctx.font = "bold 18px 'Urbanist', sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(guest.isVip ? "★ PASE DE ACCESO VIP ★" : "PASE DE ACCESO PERSONAL", w / 2, 76);
@@ -2130,7 +2160,7 @@ function renderVipPassToCanvas(canvas, guest) {
         ctx.font = "bold 12px 'Urbanist', sans-serif";
         ctx.fillText(item.label, bx + boxW / 2, boxY + 32);
 
-        ctx.fillStyle = guest.isVip && idx === 1 ? "#DE6443" : "#F5EDE6";
+        ctx.fillStyle = guest.isVip && idx === 1 ? accentColor : "#F5EDE6";
         ctx.font = "800 20px 'Urbanist', sans-serif";
         const shortVal = String(item.val).length > 13 ? String(item.val).substring(0, 13) : String(item.val);
         ctx.fillText(shortVal, bx + boxW / 2, boxY + 66);
@@ -2142,7 +2172,7 @@ function renderVipPassToCanvas(canvas, guest) {
     ctx.fillText("Presenta este pase digital en la entrada con el brillo de tu pantalla al máximo.", w / 2, 755);
 }
 
-function openIndividualQrModal(guestId) {
+async function openIndividualQrModal(guestId) {
     const guest = guestData.find(g => g.id === guestId);
     if (!guest) return;
 
@@ -2150,6 +2180,8 @@ function openIndividualQrModal(guestId) {
     indivGuestId.textContent = guest.id;
     indivGuestQty.textContent = guest.quantity;
     indivGuestTable.textContent = guest.table || "-";
+
+    await ensureFontsLoaded();
 
     const vipCanvas = document.getElementById("vip-pass-canvas");
     if (vipCanvas) {
